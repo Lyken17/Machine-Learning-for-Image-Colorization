@@ -17,10 +17,6 @@ Run `validation.m` for validation.
    
 ##Visualization  
 Run `predict.m`. Remember to specify the path of the target image.  
-   
-      
-         
-          
-            
-By Zeyu Zhao.
+<br />      
+By Zeyu Zhao.   
 Nov. 08, 2016
