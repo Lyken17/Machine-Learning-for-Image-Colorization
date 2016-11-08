@@ -1,5 +1,4 @@
 %By Zeyu Zhao
-%Input image must be 256*256
 load('model.mat');
 files=dir('val2014/*.jpg');
 error=0.0;
