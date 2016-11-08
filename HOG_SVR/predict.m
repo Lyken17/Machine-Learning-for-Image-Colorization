@@ -1,4 +1,7 @@
-img=imread('F:\b.jpg');
+%Zeyu Zhao
+%Visualization predict result
+load('model.mat');
+img=imread('F:\a.jpg');
 [y,~,~,~]=rgb2yuv(imresize(img,[256,256]));
 X=feature_extract_y(y);
 u_p=predict(mdl_u,X);
