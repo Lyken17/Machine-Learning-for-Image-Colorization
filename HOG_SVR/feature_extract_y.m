@@ -1,20 +1,13 @@
 %By Zeyu Zhao
 %Input image must be 256*256
-function [X,U,V]=feature_extract(img)
-    [y,u,v,~]=rgb2yuv(img);
+function X=feature_extract_y(ymtx)
     %Downsampling
-    y=scale_matrix(y,0.25);
-    u=scale_matrix(u,0.25);
-    v=scale_matrix(v,0.25);
+    y=scale_matrix(ymtx,0.25);
     points = zeros(64*64,2);
-    U=[];
-    V=[];
     Y=[];
     for i = 1:64
         for j = 1:64
             points((i-1)*64+j,:)=[i+8,j+8];
-            U=[U;u(i,j)];
-            V=[V;v(i,j)];
             Y=[Y;y(i,j)];
         end
     end
