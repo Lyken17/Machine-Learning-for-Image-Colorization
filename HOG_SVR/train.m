@@ -1,9 +1,16 @@
- files=dir('F:/*.jpg');
+%By Zeyu Zhao
+%Input image must be 256*256
+files=dir('train2014/*.jpg');
 X_F=[];
 U_F=[];
 V_F=[];
 for file = files'
-    [X,U,V]=feature_extract(imresize(imread(strcat('F:/',file.name)),[256,256]));
+    img=imread(strcat('train2014/',file.name));
+    if size(img,3) < 3
+        continue
+    end
+    file.name
+    [X,U,V]=feature_extract(imresize(img,[256,256]));
     X_F=[X_F;X];
     U_F=[U_F;U];
     V_F=[V_F;V];
