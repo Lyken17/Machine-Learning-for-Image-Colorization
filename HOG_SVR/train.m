@@ -1,5 +1,4 @@
 %By Zeyu Zhao
-%Input image must be 256*256
 files=dir('train2014/*.jpg');
 X_F=[];
 U_F=[];
