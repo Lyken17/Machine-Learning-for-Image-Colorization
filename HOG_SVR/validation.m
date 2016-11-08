@@ -27,7 +27,7 @@ for file = files'
     v_p=scale_matrix(v_pp,4);
     [~,~,~,pimg]=yuv2rgb(y,u_p,v_p);
     [y_p,u_p,v_p,~]=rgb2yuv(pimg);
-    error=error+mean(mean((y_p.-y).^2))+mean(mean((u_p.-u).^2))+mean(mean((v_p.-v).^2));
+    error=error+mean(mean((y_p-y).^2))+mean(mean((u_p-u).^2))+mean(mean((v_p-v).^2));
     count=count+1;
 end
 error=error/double(count);
