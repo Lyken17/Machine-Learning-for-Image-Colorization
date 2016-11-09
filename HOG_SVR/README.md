@@ -1,4 +1,4 @@
-Matlab files for Support Vector Machine Regression based on HOG features.  
+Matlab files for Support Vector Machine Regression based on HOG features. (Validation Error: 566.610)  
 ##Training  
 Run `train.m` for training.
 + Convert image to YUV.   
