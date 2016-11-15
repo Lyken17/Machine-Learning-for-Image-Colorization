@@ -3,6 +3,8 @@ require 'nn'
 require 'image'
 local utils = require 'utils'
 require 'ShaveImage'
+require 'TotalVariation'
+require 'InstanceNormalization'
 
 
 --[[
@@ -13,7 +15,8 @@ directory of images.
 local cmd = torch.CmdLine()
 
 -- Model options
-cmd:option('-model', 'colorization.t7')
+cmd:option('-umodel', 'umodel.t7')
+cmd:option('-vmodel', 'vmodel.t7')
 
 -- Input / output options
 cmd:option('-input_image', '')
@@ -36,18 +39,23 @@ local function main()
   end
 
   local dtype, use_cudnn = utils.setup_gpu(opt.gpu, opt.backend, opt.use_cudnn == 1)
-  local ok, checkpoint = pcall(function() return torch.load(opt.model) end)
-  if not ok then
-    print('ERROR: Could not load model from ' .. opt.model)
+  local oku, ucheckpoint = pcall(function() return torch.load(opt.umodel) end)
+  local okv, vcheckpoint = pcall(function() return torch.load(opt.vmodel) end)
+  if not (oku and okv) then
+    print('ERROR: Could not load model')
     print('You may need to download the pretrained models by running')
     print('bash download_colorization_model.sh')
     return
   end
-  local model = checkpoint.model
-  model:evaluate()
-  model:type(dtype)
+  local umodel = ucheckpoint.model
+  local vmodel = vcheckpoint.model
+  umodel:evaluate()
+  umodel:type(dtype)
+  vmodel:evaluate()
+  vmodel:type(dtype)
   if use_cudnn then
-    cudnn.convert(model, cudnn)
+    cudnn.convert(umodel, cudnn)
+    cudnn.convert(vmodel, cudnn)
     if opt.cudnn_benchmark == 0 then
       cudnn.benchmark = false
       cudnn.fastest = true
@@ -60,18 +68,14 @@ local function main()
     local H, W = img:size(2), img:size(3)
 
     if img:size(1)>1 then
-      local t=img[1]:clone()
-      t=t:fill(0):view(1,H,W)
-      t[1]:add(torch.mul(img[1],0.299)):add(torch.mul(img[2],0.587)):add(torch.mul(img[3],0.114))
-      img=t
+      local t=image.rgb2yuv(img)
+      img = t[1]
     end
 
     local img_pre = img:view(1, 1, H, W):type(dtype)
-    print(img_pre:size())
-    local uv = model:forward(torch.add(img_pre,-0.5))
-    print(uv:size())
-    local img_out = torch.cat(img_pre,uv,2):view(3,H,W)
-    img_out = image.yuv2rgb(img_out)
+    local u = umodel:forward(torch.add(img_pre,-0.5))
+    local v = vmodel:forward(torch.add(img_pre,-0.5))
+    local img_out = torch.cat(torch.cat(img_pre,u,2),v,2):view(3,H,W)
     
 
     print('Writing output image to ' .. out_path)
@@ -79,7 +83,7 @@ local function main()
     if not path.isdir(out_dir) then
       paths.mkdir(out_dir)
     end
-    image.save(out_path, img_out)
+    image.save(out_path, image.yuv2rgb(img_out))
   end
 
 
