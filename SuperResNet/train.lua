@@ -24,7 +24,7 @@ cmd:option('-use_instance_norm', 1)
 -- Optimization
 cmd:option('-num_iterations', 40000)
 cmd:option('-max_train', -1)
-cmd:option('-batch_size', 4)
+cmd:option('-batch_size', 16)
 cmd:option('-learning_rate', 1e-3)
 cmd:option('-lr_decay_every', -1)
 cmd:option('-lr_decay_factor', 0.5)
@@ -128,7 +128,7 @@ function main()
         local x, y = loader:getBatch('val')
         x, y = x:type(dtype), y:type(dtype)
         local out = model:forward(x)
-        val_loss = val_loss + criterion(out,y)
+        val_loss = val_loss + criterion:forward(out,y)
       end
       val_loss = val_loss / val_batches
       print(string.format('val loss = %f', val_loss))
