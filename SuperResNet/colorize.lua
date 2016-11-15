@@ -15,8 +15,7 @@ directory of images.
 local cmd = torch.CmdLine()
 
 -- Model options
-cmd:option('-umodel', 'umodel.t7')
-cmd:option('-vmodel', 'vmodel.t7')
+cmd:option('-model', 'checkpoint.t7')
 
 -- Input / output options
 cmd:option('-input_image', '')
@@ -39,23 +38,18 @@ local function main()
   end
 
   local dtype, use_cudnn = utils.setup_gpu(opt.gpu, opt.backend, opt.use_cudnn == 1)
-  local oku, ucheckpoint = pcall(function() return torch.load(opt.umodel) end)
-  local okv, vcheckpoint = pcall(function() return torch.load(opt.vmodel) end)
-  if not (oku and okv) then
+  local ok, checkpoint = pcall(function() return torch.load(opt.model) end)
+  if not ok then
     print('ERROR: Could not load model')
     print('You may need to download the pretrained models by running')
     print('bash download_colorization_model.sh')
     return
   end
-  local umodel = ucheckpoint.model
-  local vmodel = vcheckpoint.model
-  umodel:evaluate()
-  umodel:type(dtype)
-  vmodel:evaluate()
-  vmodel:type(dtype)
+  local model = checkpoint.model
+  model:evaluate()
+  model:type(dtype)
   if use_cudnn then
-    cudnn.convert(umodel, cudnn)
-    cudnn.convert(vmodel, cudnn)
+    cudnn.convert(model, cudnn)
     if opt.cudnn_benchmark == 0 then
       cudnn.benchmark = false
       cudnn.fastest = true
@@ -73,9 +67,16 @@ local function main()
     end
 
     local img_pre = img:view(1, 1, H, W):type(dtype)
-    local u = umodel:forward(torch.add(img_pre,-0.5))
-    local v = vmodel:forward(torch.add(img_pre,-0.5))
-    local img_out = torch.cat(torch.cat(img_pre,u,2),v,2):view(3,H,W)
+    local labout = model:forward(torch.add(img_pre,-0.5))
+    labout[1][1]:add(50)
+    labout=labout:view(3,H,W)
+    print(labout:size())
+
+    --strange: doesn't work for cuda
+    img_out=image.lab2rgb(labout:type('torch.DoubleTensor'))
+    img_out=image.rgb2yuv(img_out)
+    img_out[1]=img_pre[1][1]:type('torch.DoubleTensor')
+    img_out=image.yuv2rgb(img_out)
     
 
     print('Writing output image to ' .. out_path)
@@ -83,7 +84,7 @@ local function main()
     if not path.isdir(out_dir) then
       paths.mkdir(out_dir)
     end
-    image.save(out_path, image.yuv2rgb(img_out))
+    image.save(out_path, img_out)
   end
 
 

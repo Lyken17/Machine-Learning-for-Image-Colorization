@@ -14,19 +14,18 @@ Train a feedforward style transfer model
 --]]
 
 -- Generic options
-cmd:option('-arch', 'c9s1-32,d64,d128,R128,R128,R128,R128,R128,u64,u32,c9s1-1')
+cmd:option('-arch', 'c9s1-32,d64,d128,R128,R128,R128,R128,R128,u64,u32,c9s1-3')
 cmd:option('-h5_file', 'ms-coco-256.h5')
 cmd:option('-padding_type', 'reflect-start')
 cmd:option('-tanh_constant', 150)
 cmd:option('-resume_from_checkpoint', '')
 cmd:option('-use_instance_norm', 1)
-cmd:option('-train_u', 1)
 
 -- Optimization
 cmd:option('-num_iterations', 40000)
 cmd:option('-max_train', -1)
 cmd:option('-batch_size', 4)
-cmd:option('-learning_rate', 1e-6)
+cmd:option('-learning_rate', 1e-3)
 cmd:option('-lr_decay_every', -1)
 cmd:option('-lr_decay_factor', 0.5)
 cmd:option('-weight_decay', 0)
@@ -71,14 +70,9 @@ function main()
     assert(x == params)
     grad_params:zero()
     
-    -- x is y value
-    local x, u, v = loader:getBatch('train')
-    local y=nil
-    if opt.train_u==1 then
-        y=u
-    else
-        y=v
-    end
+    -- x is y value, y is lab value
+    local x, y = loader:getBatch('train')
+    
     x, y = x:type(dtype), y:type(dtype)
 
     -- Run model forward
