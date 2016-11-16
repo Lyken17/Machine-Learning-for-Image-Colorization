@@ -29,5 +29,7 @@ for file = files'
     error=error+mean(mean((y_p-y).^2))+mean(mean((u_p-u).^2))+mean(mean((v_p-v).^2));
     count=count+1;
 end
-error=error/double(count);
+
+%Normalize YUV from [0,255] to [0,1]
+error=error/double(count)/(255*255*3.0);
 save('error.mat','error');
