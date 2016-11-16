@@ -31,7 +31,6 @@ cmd:option('-output_dir', '')
 cmd:option('-gpu', -1)
 cmd:option('-backend', 'cuda')
 cmd:option('-use_cudnn', 1)
-cmd:option('-cudnn_benchmark', 0)
 
 
 local function main()
@@ -54,10 +53,6 @@ local function main()
   model:type(dtype)
   if use_cudnn then
     cudnn.convert(model, cudnn)
-    if opt.cudnn_benchmark == 0 then
-      cudnn.benchmark = false
-      cudnn.fastest = true
-    end
   end
 
   local function run_image(in_path, out_path)

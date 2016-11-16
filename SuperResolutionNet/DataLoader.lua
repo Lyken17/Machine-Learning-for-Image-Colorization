@@ -37,7 +37,7 @@ function DataLoader:__init(opt)
 
   self.num_minibatches = {}
   for k, v in pairs(self.split_sizes) do
-    self.num_minibatches[k] = math.floor(v / self.batch_size)
+    self.num_minibatches[k] = math.ceil(v / self.batch_size)
   end
   
   if opt.max_train and opt.max_train > 0 then
