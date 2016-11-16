@@ -1,10 +1,14 @@
+--[[
+Deploy the model...
+
+- Zeyu Zhao.
+- Nov. 18.
+--]]
 require 'torch'
 require 'nn'
 require 'image'
 local utils = require 'utils'
 require 'ShaveImage'
-require 'TotalVariation'
-require 'InstanceNormalization'
 
 
 --[[
@@ -40,7 +44,7 @@ local function main()
   local dtype, use_cudnn = utils.setup_gpu(opt.gpu, opt.backend, opt.use_cudnn == 1)
   local ok, checkpoint = pcall(function() return torch.load(opt.model) end)
   if not ok then
-    print('ERROR: Could not load model')
+    print('ERROR: Could not load model from ' .. opt.model)
     print('You may need to download the pretrained models by running')
     print('bash download_colorization_model.sh')
     return
@@ -62,15 +66,19 @@ local function main()
     local H, W = img:size(2), img:size(3)
 
     if img:size(1)>1 then
-      local t=image.rgb2yuv(img)
-      img = t[1]
+      local t=img[1]:clone()
+      t=t:fill(0):view(1,H,W)
+      t[1]:add(torch.mul(img[1],0.299)):add(torch.mul(img[2],0.587)):add(torch.mul(img[3],0.114))
+      img=t
     end
 
     local img_pre = img:view(1, 1, H, W):type(dtype)
+    print(img_pre:size())
     local uv = model:forward(torch.add(img_pre,-0.5))
     print(uv:size())
     local img_out = torch.cat(img_pre,uv,2):view(3,H,W)
     img_out = image.yuv2rgb(img_out)
+    
 
     print('Writing output image to ' .. out_path)
     local out_dir = paths.dirname(out_path)

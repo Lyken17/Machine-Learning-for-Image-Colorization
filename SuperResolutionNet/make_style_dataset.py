@@ -1,3 +1,9 @@
+"""
+Edited to exclude all gray images
+- Zeyu Zhao
+- Nov 16
+"""
+
 import os, json, argparse
 from threading import Thread
 from Queue import Queue

@@ -1,3 +1,11 @@
+--[[
+Use MSECriterion to train a UV network and use Y as input.
+Modify the network input to 1 dimension and output to 2 dimension.
+Increase batch_size. 4 is bad for colorization
+
+- Zeyu Zhao.
+- Nov 16.
+--]]
 require 'torch'
 require 'optim'
 require 'image'
@@ -17,19 +25,19 @@ Train a feedforward style transfer model
 cmd:option('-arch', 'c9s1-32,d64,d128,R128,R128,R128,R128,R128,u64,u32,c9s1-2')
 cmd:option('-h5_file', 'ms-coco-256.h5')
 cmd:option('-padding_type', 'reflect-start')
-cmd:option('-tanh_constant', 150)
 cmd:option('-resume_from_checkpoint', '')
-cmd:option('-use_instance_norm', 1)
+
+-- Upsampling options
+cmd:option('-upsample_factor', 4)
 
 -- Optimization
 cmd:option('-num_iterations', 40000)
 cmd:option('-max_train', -1)
 cmd:option('-batch_size', 30)
 cmd:option('-learning_rate', 1e-3)
-cmd:option('-lr_decay_every', 3000)
+cmd:option('-lr_decay_every', 5000)
 cmd:option('-lr_decay_factor', 0.5)
 cmd:option('-weight_decay', 0)
-cmd:option('-tv_strength', 1e-6)
 
 -- Checkpointing
 cmd:option('-checkpoint_name', 'checkpoint')
@@ -70,9 +78,8 @@ function main()
     assert(x == params)
     grad_params:zero()
     
-    -- x is y value, y is lab value
+    -- x is y value, y is uv value
     local x, y = loader:getBatch('train')
-    
     x, y = x:type(dtype), y:type(dtype)
 
     -- Run model forward

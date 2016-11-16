@@ -1,13 +1,19 @@
+--[[
+Neural Net Structure Modification:
+- Remove TotalVariation and InstantNorm layer. We don't need it for colorization
+- Remove MulConstant layer. Tanh range is [-1,1]. Enough for UV prediction
+
+-Zeyu Zhao
+-Nov. 18.
+--]]
+
 require 'nn'
 require 'ShaveImage'
-require 'TotalVariation'
-require 'InstanceNormalization'
-
 
 local M = {}
 
 
-local function build_conv_block(dim, padding_type, use_instance_norm)
+local function build_conv_block(dim, padding_type)
   local conv_block = nn.Sequential()
   local p = 0
   if padding_type == 'reflect' then
@@ -18,11 +24,7 @@ local function build_conv_block(dim, padding_type, use_instance_norm)
     p = 1
   end
   conv_block:add(nn.SpatialConvolution(dim, dim, 3, 3, 1, 1, p, p))
-  if use_instance_norm == 1 then
-    conv_block:add(nn.InstanceNormalization(dim))
-  else
-    conv_block:add(nn.SpatialBatchNormalization(dim))
-  end
+  conv_block:add(nn.SpatialBatchNormalization(dim))
   conv_block:add(nn.ReLU(true))
   if padding_type == 'reflect' then
     conv_block:add(nn.SpatialReflectionPadding(1, 1, 1, 1))
@@ -30,20 +32,16 @@ local function build_conv_block(dim, padding_type, use_instance_norm)
     conv_block:add(nn.SpatialReplicationPadding(1, 1, 1, 1))
   end
   conv_block:add(nn.SpatialConvolution(dim, dim, 3, 3, 1, 1, p, p))
-  if use_instance_norm == 1 then
-    conv_block:add(nn.InstanceNormalization(dim))
-  else
-    conv_block:add(nn.SpatialBatchNormalization(dim))
-  end
+  conv_block:add(nn.SpatialBatchNormalization(dim))
   return conv_block
 end
 
 
-local function build_res_block(dim, padding_type, use_instance_norm)
-  local conv_block = build_conv_block(dim, padding_type, use_instance_norm)
+local function build_res_block(dim, padding_type)
+  local conv_block = build_conv_block(dim, padding_type)
   local res_block = nn.Sequential()
   local concat = nn.ConcatTable()
-  concat:add(conv_block)
+  concat:add(conv_block)  
   if padding_type == 'none' or padding_type == 'reflect-start' then
     concat:add(nn.ShaveImage(2))
   else
@@ -105,13 +103,13 @@ function M.build_model(opt)
     elseif first_char == 'C' then
       -- Non-residual conv block
       next_dim = tonumber(string.sub(v, 2))
-      layer = build_conv_block(next_dim, opt.padding_type, opt.use_instance_norm)
+      layer = build_conv_block(next_dim, opt.padding_type)
       needs_bn = false
       needs_relu = true
     elseif first_char == 'R' then
       -- Residual (non-bottleneck) block
       next_dim = tonumber(string.sub(v, 2))
-      layer = build_res_block(next_dim, opt.padding_type, opt.use_instance_norm)
+      layer = build_res_block(next_dim, opt.padding_type)
       needs_bn = false
       needs_relu = false
     end
@@ -121,11 +119,7 @@ function M.build_model(opt)
       needs_bn = false
     end
     if needs_bn then
-      if opt.use_instance_norm == 1 then
-        model:add(nn.InstanceNormalization(next_dim))
-      else
         model:add(nn.SpatialBatchNormalization(next_dim))
-      end
     end
     if needs_relu then
       model:add(nn.ReLU(true))
@@ -135,8 +129,6 @@ function M.build_model(opt)
   end
 
   model:add(nn.Tanh())
-  model:add(nn.MulConstant(opt.tanh_constant))
-  model:add(nn.TotalVariation(opt.tv_strength))
 
   return model
 end

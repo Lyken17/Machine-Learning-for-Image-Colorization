@@ -1,3 +1,4 @@
+--- Modified to load YUV instead of RGB images
 require 'torch'
 require 'hdf5'
 require 'image'
@@ -77,6 +78,8 @@ function DataLoader:getBatch(split)
     uv[t][1] = yuv[2]
     uv[t][2] = yuv[3]
   end
+
+  -- Make the average 0
   y:add(-0.5)
   return y, uv
 end
