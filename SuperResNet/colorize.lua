@@ -67,17 +67,10 @@ local function main()
     end
 
     local img_pre = img:view(1, 1, H, W):type(dtype)
-    local labout = model:forward(torch.add(img_pre,-0.5))
-    labout[1][1]:add(50)
-    labout=labout:view(3,H,W)
-    print(labout:size())
-
-    --strange: doesn't work for cuda
-    img_out=image.lab2rgb(labout:type('torch.DoubleTensor'))
-    img_out=image.rgb2yuv(img_out)
-    img_out[1]=img_pre[1][1]:type('torch.DoubleTensor')
-    img_out=image.yuv2rgb(img_out)
-    
+    local uv = model:forward(torch.add(img_pre,-0.5))
+    print(uv:size())
+    local img_out = torch.cat(img_pre,uv,2):view(3,H,W)
+    img_out = image.yuv2rgb(img_out)
 
     print('Writing output image to ' .. out_path)
     local out_dir = paths.dirname(out_path)
