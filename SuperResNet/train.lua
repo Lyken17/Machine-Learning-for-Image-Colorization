@@ -14,7 +14,7 @@ Train a feedforward style transfer model
 --]]
 
 -- Generic options
-cmd:option('-arch', 'c9s1-32,d64,d128,R128,R128,R128,R128,R128,u64,u32,c9s1-3')
+cmd:option('-arch', 'c9s1-32,d64,d128,R128,R128,R128,R128,R128,u64,u32,c9s1-2')
 cmd:option('-h5_file', 'ms-coco-256.h5')
 cmd:option('-padding_type', 'reflect-start')
 cmd:option('-tanh_constant', 150)
@@ -24,9 +24,9 @@ cmd:option('-use_instance_norm', 1)
 -- Optimization
 cmd:option('-num_iterations', 40000)
 cmd:option('-max_train', -1)
-cmd:option('-batch_size', 16)
+cmd:option('-batch_size', 30)
 cmd:option('-learning_rate', 1e-3)
-cmd:option('-lr_decay_every', -1)
+cmd:option('-lr_decay_every', 3000)
 cmd:option('-lr_decay_factor', 0.5)
 cmd:option('-weight_decay', 0)
 cmd:option('-tv_strength', 1e-6)
