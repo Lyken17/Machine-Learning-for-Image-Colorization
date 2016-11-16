@@ -70,12 +70,13 @@ function DataLoader:getBatch(split)
     self.split_idxs[split] = 1
   end
   local y = torch.Tensor(images:size(1),1,self.image_height,self.image_width)
-  local lab = torch.Tensor(images:size(1),3,self.image_height,self.image_width)
+  local uv = torch.Tensor(images:size(1),2,self.image_height,self.image_width)
   for t=1,images:size(1) do
-    y[t]= image.rgb2y(images[t])
-    lab[t] = image.rgb2lab(images[t])
-    lab[t][1]:add(-50)
+    local yuv = image.rgb2yuv(images[t])
+    y[t][1] = yuv[1]
+    uv[t][1] = yuv[2]
+    uv[t][2] = yuv[3]
   end
   y:add(-0.5)
-  return y, lab
+  return y, uv
 end
