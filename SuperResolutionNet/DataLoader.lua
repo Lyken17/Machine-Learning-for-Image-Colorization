@@ -1,4 +1,4 @@
---- Modified to load YUV instead of RGB images
+--- Modified to load normalized YUV instead of RGB images
 require 'torch'
 require 'hdf5'
 require 'image'
@@ -75,8 +75,8 @@ function DataLoader:getBatch(split)
   for t=1,images:size(1) do
     local yuv = image.rgb2yuv(images[t])
     y[t][1] = yuv[1]
-    uv[t][1] = yuv[2]
-    uv[t][2] = yuv[3]
+    uv[t][1] = torch.div(yuv[2],0.436)
+    uv[t][2] = torch.div(yuv[3],0.615)
   end
 
   -- Make the average 0
