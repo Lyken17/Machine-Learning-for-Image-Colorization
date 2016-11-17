@@ -1,8 +1,8 @@
 %By Zeyu Zhao
 function [r,g,b,rgb]=yuv2rgb(y,u,v)
-	r=round(y+1.13983*(v-128));
-    g=round(y-0.39465*(u-128)-0.58060*(v-128));
-    b=round(y+2.03211*(u-128));
+    r=round((y+1.13983*v)*255);
+    g=round((y-0.39465* u -0.58060*v)*255);
+    b=round((y+2.03211*u)*255);
     for i=1:numel(r)
         if r(i)<0
             r(i)=0;
