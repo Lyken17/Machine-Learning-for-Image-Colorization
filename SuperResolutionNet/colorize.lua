@@ -57,20 +57,17 @@ local function main()
 
   local function run_image(in_path, out_path)
     local img = image.load(in_path)
-    img = image.scale(img, 256,256)
     local H, W = img:size(2), img:size(3)
 
     if img:size(1)>1 then
-      local t=img[1]:clone()
-      t=t:fill(0):view(1,H,W)
-      t[1]:add(torch.mul(img[1],0.299)):add(torch.mul(img[2],0.587)):add(torch.mul(img[3],0.114))
-      img=t
+      img = image.rgb2y(img)
     end
 
     local img_pre = img:view(1, 1, H, W):type(dtype)
-    print(img_pre:size())
     local uv = model:forward(torch.add(img_pre,-0.5))
-    print(uv:size())
+    uv[1][1]:mul(0.436)
+    uv[1][2]:mul(0.615)
+    uv=image.scale(uv,W,H)
     local img_out = torch.cat(img_pre,uv,2):view(3,H,W)
     img_out = image.yuv2rgb(img_out)
     
