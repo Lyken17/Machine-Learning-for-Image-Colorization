@@ -53,6 +53,12 @@ function main()
     local x, y = loader:getBatch('val')
     x, y = x:type(dtype), y:type(dtype)
     local out = model:forward(x)
+    for t = 1, y:size(1) do
+      y[t][1]:mul(0.436)
+      y[t][2]:mul(0.615)
+      out[t][1]:mul(0.436)
+      out[t][2]:mul(0.615)
+    end
     val_loss = val_loss + criterion:forward(out,y)
     print(string.format('Iteration = %d / %d', i, loader.num_minibatches['val']))
   end
@@ -62,6 +68,4 @@ function main()
   print(string.format('val loss = %f', val_loss))
 
 end
-
-
 main()
