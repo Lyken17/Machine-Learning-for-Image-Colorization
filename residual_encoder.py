@@ -29,14 +29,16 @@ def init_file_path(directory):
     return paths
 
 
-def read_image(file_path):
+def read_image(filename_queue):
     """
     Read and store image with YUV color space
-    :param file_path: the path for the image file
+    :param filename_queue: the filename queue for image files
     :return: image with YUV color space
     """
     # Read the image with RGB color space
-    rgb_image = tf.image.decode_jpeg(tf.read_file(file_path), channels=3)
+    reader = tf.WholeFileReader()
+    key, content = reader.read(filename_queue)
+    rgb_image = tf.image.decode_jpeg(content, channels=3)
     # Make pixel element value in [0, 1)
     rgb_image = tf.image.convert_image_dtype(rgb_image, tf.float32)
     # Resize image to the right image_size
@@ -46,38 +48,52 @@ def read_image(file_path):
     return yuv_image
 
 
-def get_y_and_uv_data(file_paths):
+def input_pipeline(filenames, b_size, num_epochs=None, shuffle=True):
+    """
+    Use a queue that randomizes the order of examples and return batch of images
+    :param filenames: filenames
+    :param b_size: batch size
+    :param num_epochs: number of epochs for producing each string before generating an OutOfRange error
+    :param shuffle: if true, the strings are randomly shuffled within each epoch
+    :return: a batch of yuv_images
+    """
+    filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_epochs, shuffle=shuffle)
+    yuv_image = read_image(filename_queue)
+    min_after_dequeue = dequeue_buffer_size
+    capacity = min_after_dequeue + 3 * b_size
+    image_batch = tf.train.shuffle_batch([yuv_image],
+                                         batch_size=b_size,
+                                         capacity=capacity,
+                                         shapes=[image_size, image_size, 3],
+                                         min_after_dequeue=min_after_dequeue)
+    return image_batch
+
+
+def get_y_and_uv_data(filenames, b_size):
     """
     Get the input data with Y channel and target data with UV channels
-    :param file_paths: the path for the image file
+    :param filenames: the path for the image file
+    :param b_size: batch size
     :return: input data with Y channel and target data with UV channels
     """
-    _y = []
-    _uv = []
-    for i in file_paths:
-        # Get the image with YUV channels
-        t = read_image(i)
-        # Split channels
-        channel_y = tf.slice(t, [0, 0, 0], [image_size, image_size, 1])
-        channel_u = tf.slice(t, [0, 0, 1], [image_size, image_size, 1])
-        channel_v = tf.slice(t, [0, 0, 2], [image_size, image_size, 1])
-        # Normalize channels
-        channel_y = tf.mul(tf.sub(channel_y, 0.5), 2.0)
-        channel_u = tf.div(channel_u, 0.436)
-        channel_v = tf.div(channel_v, 0.615)
-        # Add channel data
-        _y.append(channel_y)
-        _uv.append(tf.pack([channel_u, channel_v], axis=0))
-        break
-    return _y, _uv
+    # Get the image with YUV channels
+    _yuv = input_pipeline(filenames, b_size)
+    # Split channels
+    channel_y = tf.slice(_yuv, [0, 0, 0, 0], [-1, -1, -1, 1])
+    channel_u = tf.slice(_yuv, [0, 0, 0, 1], [-1, -1, -1, 1])
+    channel_v = tf.slice(_yuv, [0, 0, 0, 2], [-1, -1, -1, 1])
+    # Normalize channels
+    channel_y = tf.mul(tf.sub(channel_y, 0.5), 2.0, name="channel_y")
+    channel_u = tf.div(channel_u, 0.436, name="channel_u")
+    channel_v = tf.div(channel_v, 0.615, name="channel_v")
+    # Add channel data
+    channel_uv = tf.concat(concat_dim=3, values=[channel_u, channel_v], name="channel_uv")
+    return channel_y, channel_uv
 
 
 class ResidualEncoder(object):
-    def __init__(self, train_input, train_output):
-        self.train_input = train_input
-        self.train_output = train_output
-        self.data_size = tf.shape(train_input)[0]
-        self.counter = 0
+    def __init__(self):
+        pass
 
     @staticmethod
     def get_weight(name):
@@ -88,37 +104,35 @@ class ResidualEncoder(object):
         """
         return weights[name]
 
-    @staticmethod
-    def get_bias(name):
-        """
-        Get bias for one layer
-        :param name: the name of the layer
-        :return: the initial bias for this layer
-        """
-        return biases[name]
+    # @staticmethod
+    # def get_bias(name):
+    #     """
+    #     Get bias for one layer
+    #     :param name: the name of the layer
+    #     :return: the initial bias for this layer
+    #     """
+    #     return biases[name]
 
     @staticmethod
     def get_cost(predict_val, real_val):
-        # TODO: Implement this function
-        return 0
+        """
+        Cost function
+        :param predict_val: the predict value
+        :param real_val: the real value
+        :return: cost
+        """
+        return tf.reduce_mean(tf.square(tf.sub(predict_val, real_val)))
 
-    def get_next_batch(self, b_size):
+    @staticmethod
+    def get_accuracy(predict_val, real_val):
         """
-        Get next batch of data
-        :param b_size: the size of mini batch
-        :return: a batch of data
+        Accuracy function
+        :param predict_val: the predict value
+        :param real_val: the real value
+        :return: accuracy
         """
-        _input = []
-        _output = []
-        for i in range(b_size):
-            self.counter += 1
-            if self.counter >= self.data_size:
-                self.counter = 0
-            _input.append(self.train_input[i])
-            _output.append(self.train_output[i])
-        _input = tf.pack(_input, axis=0)
-        _output = tf.pack(_output, axis=0)
-        return _input, _output
+        # TODO: Implement accuracy function
+        return tf.reduce_mean(tf.square(tf.sub(predict_val, real_val)))
 
     def conv_layer(self, layer_input, name):
         """
@@ -129,11 +143,11 @@ class ResidualEncoder(object):
         """
         with tf.variable_scope(name):
             weight = self.get_weight(name)
-            conv_biases = self.get_bias(name)
             output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME')
+            # conv_biases = self.get_bias(name)
             # output = tf.nn.bias_add(output, conv_biases)
             # output = tf.nn.relu(output)
-            output = self.batch_normal(output, is_training=is_training, scope=name)
+            output = self.batch_normal(output, training_flag=is_training, scope=name)
             return output
 
     def max_pool(self, layer_input, name):
@@ -145,8 +159,8 @@ class ResidualEncoder(object):
         """
         return tf.nn.max_pool(layer_input, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
 
-    def batch_normal(self, input_data, is_training, scope):
-        return tf.cond(is_training,
+    def batch_normal(self, input_data, training_flag, scope):
+        return tf.cond(training_flag,
                        lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
                                           activation_fn=tf.nn.relu, updates_collections=None, scope=scope),
                        lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
@@ -162,14 +176,10 @@ class ResidualEncoder(object):
             assert input_data.get_shape().as_list()[1:] == [224, 224, 1]
 
         # Make channel duplicated to 3 channels
-        input_data = tf.image.grayscale_to_rgb(input_data)
+        input_data = tf.concat(concat_dim=3, values=[input_data, input_data, input_data])
 
         if debug:
             assert input_data.get_shape().as_list()[1:] == [224, 224, 3]
-            assert input_data[0][1][1][1] == input_data[0][1][1][2]
-            assert input_data[0][1][1][1] == input_data[0][1][1][3]
-            assert input_data[0][100][100][1] == input_data[0][100][100][2]
-            assert input_data[0][100][100][1] == input_data[0][100][100][3]
 
         # First convolutional layer
         conv1_1 = self.conv_layer(input_data, "conv1_1")
@@ -225,16 +235,45 @@ class ResidualEncoder(object):
             assert conv5_2.get_shape().as_list()[1:] == [14, 14, 512]
             assert conv5_3.get_shape().as_list()[1:] == [14, 14, 512]
 
-        # Backward upscale and convolutional layers
-        b_conv5_upscale = tf.image.resize_images(conv5_3, [28, 28, 512], method=training_resize_method)
+        # Backward upscale layer 5 and convolutional layers 4
+        b_conv5_upscale = tf.image.resize_images(conv5_3, [28, 28], method=training_resize_method)
         b_conv4 = self.conv_layer(tf.add(conv4_3, b_conv5_upscale), "b_conv4")
-        b_conv4_upscale = tf.image.resize_images(b_conv4, [56, 56, 256], method=training_resize_method)
+
+        if debug:
+            assert b_conv5_upscale.get_shape().as_list()[1:] == [28, 28, 512]
+            assert b_conv4.get_shape().as_list()[1:] == [28, 28, 256]
+
+        # Backward upscale layer 4 and convolutional layers 3
+        b_conv4_upscale = tf.image.resize_images(b_conv4, [56, 56], method=training_resize_method)
         b_conv3 = self.conv_layer(tf.add(conv3_3, b_conv4_upscale), "b_conv3")
-        b_conv3_upscale = tf.image.resize_images(b_conv3, [112, 112, 128], method=training_resize_method)
+
+        if debug:
+            assert b_conv4_upscale.get_shape().as_list()[1:] == [56, 56, 256]
+            assert b_conv3.get_shape().as_list()[1:] == [56, 56, 128]
+
+        # Backward upscale layer 3 and convolutional layers 2
+        b_conv3_upscale = tf.image.resize_images(b_conv3, [112, 112], method=training_resize_method)
         b_conv2 = self.conv_layer(tf.add(conv2_2, b_conv3_upscale), "b_conv2")
-        b_conv2_upscale = tf.image.resize_images(b_conv2, [224, 224, 64], method=training_resize_method)
+
+        if debug:
+            assert b_conv3_upscale.get_shape().as_list()[1:] == [112, 112, 128]
+            assert b_conv2.get_shape().as_list()[1:] == [112, 112, 64]
+
+        # Backward upscale layer 2 and convolutional layers 1
+        b_conv2_upscale = tf.image.resize_images(b_conv2, [224, 224], method=training_resize_method)
         b_conv1 = self.conv_layer(tf.add(conv1_2, b_conv2_upscale), "b_conv1")
+
+        if debug:
+            assert b_conv2_upscale.get_shape().as_list()[1:] == [224, 224, 64]
+            assert b_conv1.get_shape().as_list()[1:] == [224, 224, 3]
+
+        # Output layer
         output_layer = self.conv_layer(tf.add(input_data, b_conv1), "output_layer")
+
+        if debug:
+            assert output_layer.get_shape().as_list()[1:] == [224, 224, 3]
+
+        output_layer = tf.slice(output_layer, [0, 0, 0, 1], [-1, -1, -1, 2])
 
         return output_layer
 
@@ -244,48 +283,66 @@ if __name__ == '__main__':
     train_file_paths = init_file_path(train_dir)
     test_file_paths = init_file_path(test_dir)
 
-    # Get YUV image data
-    train_y, train_uv = get_y_and_uv_data(train_file_paths)
-    test_y, test_uv = get_y_and_uv_data(test_file_paths)
-
-    # Init training and testing data
-    train_y = tf.pack(train_y, axis=0)
-    train_uv = tf.pack(train_uv, axis=0)
-    test_y = tf.pack(test_y, axis=0)
-    test_uv = tf.pack(test_uv, axis=0)
+    # Create the graph, etc
+    init = tf.initialize_all_variables()
 
     # Init placeholder for input and output
-    x = tf.placeholder(tf.float32, [None, image_size, image_size, 1])
-    y = tf.placeholder(tf.float32, [None, image_size, image_size, 2])
-    is_training = tf.placeholder(tf.bool)
+    # x = tf.placeholder(tf.float32, [None, image_size, image_size, 1], name="input")
+    # y = tf.placeholder(tf.float32, [None, image_size, image_size, 2], name="output")
+    is_training = tf.placeholder(tf.bool, name="training_flag")
+    global_step = tf.Variable(0, name='global_step', trainable=False)
 
     # Init residual encoder model
-    residual_encoder = ResidualEncoder(train_y, train_uv)
+    residual_encoder = ResidualEncoder()
 
     # Make predict, cost and training model
-    predict = residual_encoder.build(input_data=x)
-    cost = residual_encoder.get_cost(predict_val=predict, real_val=y)
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
-    # TODO: Implement accuracy function
-    accuracy = 0
+    batch_xs, batch_ys = get_y_and_uv_data(train_file_paths, batch_size)
+    predict = residual_encoder.build(input_data=batch_xs)
+    cost = residual_encoder.get_cost(predict_val=predict, real_val=batch_ys)
+    accuracy = residual_encoder.get_accuracy(predict_val=predict, real_val=batch_ys)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost, global_step=global_step)
 
+    # Saver
+    saver = tf.train.Saver()
+
+    # Create the graph, etc
     init = tf.initialize_all_variables()
+
+    # Create a session for running operations in the Graph
     with tf.Session() as sess:
+        # Initialize the variables.
         sess.run(init)
+
+        # Start input enqueue threads.
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
         # Start training
         print "Start training!!!"
-        step = 1
-        while step * batch_size < training_iters:
-            batch_xs, batch_ys = residual_encoder.get_next_batch(batch_size)
-            sess.run(optimizer, feed_dict={x: batch_xs, y: batch_ys, is_training: True})
-            if step % display_step == 0:
-                acc = sess.run(accuracy, feed_dict={x: batch_xs, y: batch_ys, is_training: True})
-                loss = sess.run(cost, feed_dict={x: batch_xs, y: batch_ys, is_training: True})
-                print "Iter %d, Minibatch Loss = %f, Training Accuracy = %f" % (step, loss, acc)
-                step += 1
-        print "Training Finished!"
 
-        # Predict
-        # TODO: Test with testing data
-        # print "Testing Accuracy: %f" % (sess.run(accuracy, feed_dict={x: 0, y: 0, is_training: False}))
+        try:
+            while not coord.should_stop():
+                step = sess.run(global_step)
+                if step == training_iters:
+                    break
+                sess.run(optimizer, feed_dict={is_training: True})
+                if step % display_step == 0:
+                    loss = sess.run(cost, feed_dict={is_training: True})
+                    acc = sess.run(accuracy, feed_dict={is_training: True})
+                    print "Iter %d, Minibatch Loss = %f, Training Accuracy = %f" % (step, loss, acc)
+
+            print "Training Finished!"
+            # Predict
+            # TODO: Test with testing data
+            # print "Testing Accuracy: %f" % (sess.run(accuracy, feed_dict={x: 0, y: 0, is_training: False}))
+        except tf.errors.OUT_OF_RANGE as e:
+            # Handle exception
+            print('Done training -- epoch limit reached')
+            coord.request_stop(e)
+        finally:
+            # When done, ask the threads to stop.
+            coord.request_stop()
+
+    # Wait for threads to finish.
+    coord.join(threads)
+    sess.close()

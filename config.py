@@ -19,15 +19,10 @@ image_size = 224
 
 # Parameters for neural network
 learning_rate = 0.1
-training_iters = 500
-batch_size = 10
+training_iters = 5
+batch_size = 6
+dequeue_buffer_size = 1000
 display_step = 1
-
-# Parameters for batch normalization
-bn_mean = 0.0
-bn_variance = 1.0
-bn_offset = None
-bn_scale = None
 
 # Image resize method
 input_resize_method = ResizeMethod.NEAREST_NEIGHBOR
@@ -52,21 +47,26 @@ weights = {
     'conv5_1': tf.Variable(tf.random_normal([3, 3, 512, 512])),
     'conv5_2': tf.Variable(tf.random_normal([3, 3, 512, 512])),
     'conv5_3': tf.Variable(tf.random_normal([3, 3, 512, 512])),
+    'b_conv4': tf.Variable(tf.random_normal([3, 3, 512, 256])),
+    'b_conv3': tf.Variable(tf.random_normal([3, 3, 256, 128])),
+    'b_conv2': tf.Variable(tf.random_normal([3, 3, 128, 64])),
+    'b_conv1': tf.Variable(tf.random_normal([3, 3, 64, 3])),
+    'output_layer': tf.Variable(tf.random_normal([3, 3, 3, 3])),
 }
 
 # Biases for each layer
-biases = {
-    'conv1_1': tf.Variable(tf.random_normal([64])),
-    'conv1_2': tf.Variable(tf.random_normal([64])),
-    'conv2_1': tf.Variable(tf.random_normal([128])),
-    'conv2_2': tf.Variable(tf.random_normal([128])),
-    'conv3_1': tf.Variable(tf.random_normal([256])),
-    'conv3_2': tf.Variable(tf.random_normal([256])),
-    'conv3_3': tf.Variable(tf.random_normal([256])),
-    'conv4_1': tf.Variable(tf.random_normal([512])),
-    'conv4_2': tf.Variable(tf.random_normal([512])),
-    'conv4_3': tf.Variable(tf.random_normal([512])),
-    'conv5_1': tf.Variable(tf.random_normal([512])),
-    'conv5_2': tf.Variable(tf.random_normal([512])),
-    'conv5_3': tf.Variable(tf.random_normal([512])),
-}
+# biases = {
+#     'conv1_1': tf.Variable(tf.random_normal([64])),
+#     'conv1_2': tf.Variable(tf.random_normal([64])),
+#     'conv2_1': tf.Variable(tf.random_normal([128])),
+#     'conv2_2': tf.Variable(tf.random_normal([128])),
+#     'conv3_1': tf.Variable(tf.random_normal([256])),
+#     'conv3_2': tf.Variable(tf.random_normal([256])),
+#     'conv3_3': tf.Variable(tf.random_normal([256])),
+#     'conv4_1': tf.Variable(tf.random_normal([512])),
+#     'conv4_2': tf.Variable(tf.random_normal([512])),
+#     'conv4_3': tf.Variable(tf.random_normal([512])),
+#     'conv5_1': tf.Variable(tf.random_normal([512])),
+#     'conv5_2': tf.Variable(tf.random_normal([512])),
+#     'conv5_3': tf.Variable(tf.random_normal([512])),
+# }
