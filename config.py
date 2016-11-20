@@ -19,7 +19,7 @@ image_size = 224
 
 # Parameters for neural network
 learning_rate = 0.1
-training_iters = 5
+training_iters = 50
 batch_size = 6
 dequeue_buffer_size = 1000
 display_step = 1
@@ -51,7 +51,7 @@ weights = {
     'b_conv3': tf.Variable(tf.random_normal([3, 3, 256, 128])),
     'b_conv2': tf.Variable(tf.random_normal([3, 3, 128, 64])),
     'b_conv1': tf.Variable(tf.random_normal([3, 3, 64, 3])),
-    'output_layer': tf.Variable(tf.random_normal([3, 3, 3, 3])),
+    'b_conv0': tf.Variable(tf.random_normal([3, 3, 3, 3])),
 }
 
 # Biases for each layer

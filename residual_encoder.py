@@ -7,7 +7,9 @@ http://tinyclouds.org/colorize/
 
 import os
 
+import numpy as np
 from tensorflow.contrib.layers import batch_norm
+from matplotlib import pyplot as plt
 
 from color_space_convert import rgb_to_yuv
 from config import *
@@ -91,6 +93,23 @@ def get_y_and_uv_data(filenames, b_size):
     return channel_y, channel_uv
 
 
+def concat_images(img_a, img_b):
+    """
+    Combines two color image side-by-side.
+    :param img_a: image a on left
+    :param img_b: image b on right
+    :return: combined image
+    """
+    height_a, width_a = img_a.shape[:2]
+    height_b, width_b = img_b.shape[:2]
+    max_height = np.max([height_a, height_b])
+    total_width = width_a + width_b
+    new_img = np.zeros(shape=(max_height, total_width, 3), dtype=np.float32)
+    new_img[:height_a, :width_a] = img_a
+    new_img[:height_b, width_a:total_width] = img_b
+    return new_img
+
+
 class ResidualEncoder(object):
     def __init__(self):
         pass
@@ -121,7 +140,7 @@ class ResidualEncoder(object):
         :param real_val: the real value
         :return: cost
         """
-        return tf.reduce_mean(tf.square(tf.sub(predict_val, real_val)))
+        return tf.square(tf.sub(predict_val, real_val))
 
     @staticmethod
     def get_accuracy(predict_val, real_val):
@@ -132,7 +151,7 @@ class ResidualEncoder(object):
         :return: accuracy
         """
         # TODO: Implement accuracy function
-        return tf.reduce_mean(tf.square(tf.sub(predict_val, real_val)))
+        return tf.square(tf.sub(predict_val, real_val))
 
     def conv_layer(self, layer_input, name):
         """
@@ -268,12 +287,12 @@ class ResidualEncoder(object):
             assert b_conv1.get_shape().as_list()[1:] == [224, 224, 3]
 
         # Output layer
-        output_layer = self.conv_layer(tf.add(input_data, b_conv1), "output_layer")
+        b_conv0 = self.conv_layer(tf.add(input_data, b_conv1), "b_conv0")
 
         if debug:
-            assert output_layer.get_shape().as_list()[1:] == [224, 224, 3]
+            assert b_conv0.get_shape().as_list()[1:] == [224, 224, 3]
 
-        output_layer = tf.slice(output_layer, [0, 0, 0, 1], [-1, -1, -1, 2])
+        output_layer = tf.tanh(tf.slice(b_conv0, [0, 0, 0, 1], [-1, -1, -1, 2]), name='output_layer')
 
         return output_layer
 
@@ -283,12 +302,7 @@ if __name__ == '__main__':
     train_file_paths = init_file_path(train_dir)
     test_file_paths = init_file_path(test_dir)
 
-    # Create the graph, etc
-    init = tf.initialize_all_variables()
-
-    # Init placeholder for input and output
-    # x = tf.placeholder(tf.float32, [None, image_size, image_size, 1], name="input")
-    # y = tf.placeholder(tf.float32, [None, image_size, image_size, 2], name="output")
+    # Init placeholder and global step
     is_training = tf.placeholder(tf.bool, name="training_flag")
     global_step = tf.Variable(0, name='global_step', trainable=False)
 
@@ -302,6 +316,30 @@ if __name__ == '__main__':
     accuracy = residual_encoder.get_accuracy(predict_val=predict, real_val=batch_ys)
     optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost, global_step=global_step)
 
+    # Summaries
+    tf.histogram_summary("conv1_1", weights["conv1_1"])
+    tf.histogram_summary("conv1_2", weights["conv1_2"])
+    tf.histogram_summary("conv2_1", weights["conv2_1"])
+    tf.histogram_summary("conv2_2", weights["conv2_2"])
+    tf.histogram_summary("conv3_1", weights["conv3_1"])
+    tf.histogram_summary("conv3_2", weights["conv3_2"])
+    tf.histogram_summary("conv3_3", weights["conv3_3"])
+    tf.histogram_summary("conv4_1", weights["conv4_1"])
+    tf.histogram_summary("conv4_2", weights["conv4_2"])
+    tf.histogram_summary("conv4_3", weights["conv4_3"])
+    tf.histogram_summary("conv5_1", weights["conv5_1"])
+    tf.histogram_summary("conv5_2", weights["conv5_2"])
+    tf.histogram_summary("conv5_3", weights["conv5_3"])
+    tf.histogram_summary("b_conv4", weights["b_conv4"])
+    tf.histogram_summary("b_conv3", weights["b_conv3"])
+    tf.histogram_summary("b_conv2", weights["b_conv2"])
+    tf.histogram_summary("b_conv1", weights["b_conv1"])
+    tf.histogram_summary("b_conv0", weights["b_conv0"])
+    tf.histogram_summary("instant_loss", tf.reduce_mean(cost))
+    # tf.image_summary("colorimage", colorimage, max_images=1)
+    # tf.image_summary("pred_rgb", pred_rgb, max_images=1)
+    # tf.image_summary("grayscale", grayscale_rgb, max_images=1)
+
     # Saver
     saver = tf.train.Saver()
 
@@ -312,6 +350,11 @@ if __name__ == '__main__':
     with tf.Session() as sess:
         # Initialize the variables.
         sess.run(init)
+
+        # Merge all summaries
+        merged = tf.merge_all_summaries()
+        train_writer = tf.train.SummaryWriter("summary/train", sess.graph)
+        test_writer = tf.train.SummaryWriter("summary/test")
 
         # Start input enqueue threads.
         coord = tf.train.Coordinator()
@@ -327,9 +370,14 @@ if __name__ == '__main__':
                     break
                 sess.run(optimizer, feed_dict={is_training: True})
                 if step % display_step == 0:
-                    loss = sess.run(cost, feed_dict={is_training: True})
-                    acc = sess.run(accuracy, feed_dict={is_training: True})
-                    print "Iter %d, Minibatch Loss = %f, Training Accuracy = %f" % (step, loss, acc)
+                    loss, acc, merged = sess.run([cost, accuracy, merged], feed_dict={is_training: True})
+                    print "Iter %d, Minibatch Loss = %f, Training Accuracy = %f" % \
+                          (step, sess.run(tf.reduce_mean(loss)), sess.run(tf.reduce_mean(acc)))
+                #    summary_image = concat_images(gray_image[0], pred_image[0])
+                #    summary_image = concat_images(summary_image, color_image[0])
+                #    plt.imsave("summary/result/" + str(step) + "_0", summary_image)
+                    train_writer.add_summary(merged, step)
+                    train_writer.flush()
 
             print "Training Finished!"
             # Predict
