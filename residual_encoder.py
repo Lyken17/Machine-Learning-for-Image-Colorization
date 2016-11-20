@@ -140,7 +140,7 @@ class ResidualEncoder(object):
         :param real_val: the real value
         :return: cost
         """
-        return tf.square(tf.sub(predict_val, real_val))
+        return tf.reduce_mean(tf.square(tf.sub(predict_val, real_val)))
 
     @staticmethod
     def get_accuracy(predict_val, real_val):
@@ -151,7 +151,7 @@ class ResidualEncoder(object):
         :return: accuracy
         """
         # TODO: Implement accuracy function
-        return tf.square(tf.sub(predict_val, real_val))
+        return tf.reduce_mean(tf.square(tf.sub(predict_val, real_val)))
 
     def conv_layer(self, layer_input, name):
         """
@@ -335,7 +335,7 @@ if __name__ == '__main__':
     tf.histogram_summary("b_conv2", weights["b_conv2"])
     tf.histogram_summary("b_conv1", weights["b_conv1"])
     tf.histogram_summary("b_conv0", weights["b_conv0"])
-    tf.histogram_summary("instant_loss", tf.reduce_mean(cost))
+    tf.histogram_summary("cost", cost)
     # tf.image_summary("colorimage", colorimage, max_images=1)
     # tf.image_summary("pred_rgb", pred_rgb, max_images=1)
     # tf.image_summary("grayscale", grayscale_rgb, max_images=1)
@@ -370,13 +370,13 @@ if __name__ == '__main__':
                     break
                 sess.run(optimizer, feed_dict={is_training: True})
                 if step % display_step == 0:
-                    loss, acc, merged = sess.run([cost, accuracy, merged], feed_dict={is_training: True})
+                    loss, acc, summary = sess.run([cost, accuracy, merged], feed_dict={is_training: True})
                     print "Iter %d, Minibatch Loss = %f, Training Accuracy = %f" % \
-                          (step, sess.run(tf.reduce_mean(loss)), sess.run(tf.reduce_mean(acc)))
+                          (step, loss, acc)
                 #    summary_image = concat_images(gray_image[0], pred_image[0])
                 #    summary_image = concat_images(summary_image, color_image[0])
                 #    plt.imsave("summary/result/" + str(step) + "_0", summary_image)
-                    train_writer.add_summary(merged, step)
+                    train_writer.add_summary(summary, step)
                     train_writer.flush()
 
             print "Training Finished!"

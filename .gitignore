@@ -1,4 +1,5 @@
 .idea/
-train2014
-val2014
+summary/
+train2014/
+val2014/
 *.pyc
