@@ -5,6 +5,8 @@ Config file for residual-encoder model
 from sys import float_info
 
 import tensorflow as tf
+from tensorflow.python.ops.image_ops import ResizeMethod
+
 
 # Debug flag
 debug = True
@@ -26,6 +28,10 @@ bn_mean = 0.0
 bn_variance = 1.0
 bn_offset = None
 bn_scale = None
+
+# Image resize method
+input_resize_method = ResizeMethod.NEAREST_NEIGHBOR
+training_resize_method = ResizeMethod.NEAREST_NEIGHBOR
 
 # Directory for training and testing dataset
 train_dir = "train2014"

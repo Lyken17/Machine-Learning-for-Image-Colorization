@@ -7,7 +7,7 @@ http://tinyclouds.org/colorize/
 
 import os
 
-from tensorflow.python.ops.image_ops import ResizeMethod
+from tensorflow.contrib.layers import batch_norm
 
 from color_space_convert import rgb_to_yuv
 from config import *
@@ -37,8 +37,10 @@ def read_image(file_path):
     """
     # Read the image with RGB color space
     rgb_image = tf.image.decode_jpeg(tf.read_file(file_path), channels=3)
+    # Make pixel element value in [0, 1)
+    rgb_image = tf.image.convert_image_dtype(rgb_image, tf.float32)
     # Resize image to the right image_size
-    rgb_image = tf.image.resize_images(rgb_image, [image_size, image_size], method=ResizeMethod.BILINEAR)
+    rgb_image = tf.image.resize_images(rgb_image, [image_size, image_size], method=input_resize_method)
     # Change color space to YUV
     yuv_image = rgb_to_yuv(rgb_image)
     return yuv_image
@@ -56,8 +58,16 @@ def get_y_and_uv_data(file_paths):
         # Get the image with YUV channels
         t = read_image(i)
         # Split channels
-        _y.append(tf.slice(t, [0, 0, 0], [image_size, image_size, 1]))
-        _uv.append(tf.slice(t, [0, 0, 1], [image_size, image_size, 2]))
+        channel_y = tf.slice(t, [0, 0, 0], [image_size, image_size, 1])
+        channel_u = tf.slice(t, [0, 0, 1], [image_size, image_size, 1])
+        channel_v = tf.slice(t, [0, 0, 2], [image_size, image_size, 1])
+        # Normalize channels
+        channel_y = tf.mul(tf.sub(channel_y, 0.5), 2.0)
+        channel_u = tf.div(channel_u, 0.436)
+        channel_v = tf.div(channel_v, 0.615)
+        # Add channel data
+        _y.append(channel_y)
+        _uv.append(tf.pack([channel_u, channel_v], axis=0))
         break
     return _y, _uv
 
@@ -121,8 +131,9 @@ class ResidualEncoder(object):
             weight = self.get_weight(name)
             conv_biases = self.get_bias(name)
             output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME')
-            output = tf.nn.bias_add(output, conv_biases)
-            output = tf.nn.relu(output)
+            # output = tf.nn.bias_add(output, conv_biases)
+            # output = tf.nn.relu(output)
+            output = self.batch_normal(output, is_training=is_training, scope=name)
             return output
 
     def max_pool(self, layer_input, name):
@@ -133,6 +144,13 @@ class ResidualEncoder(object):
         :return: the layer data after max-pooling
         """
         return tf.nn.max_pool(layer_input, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
+
+    def batch_normal(self, input_data, is_training, scope):
+        return tf.cond(is_training,
+                       lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
+                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope),
+                       lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
+                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope, reuse=True))
 
     def build(self, input_data):
         """
@@ -201,22 +219,24 @@ class ResidualEncoder(object):
         conv5_1 = self.conv_layer(pool4, "conv5_1")
         conv5_2 = self.conv_layer(conv5_1, "conv5_2")
         conv5_3 = self.conv_layer(conv5_2, "conv5_3")
-        pool5 = self.max_pool(conv5_3, 'pool5')
 
         if debug:
             assert conv5_1.get_shape().as_list()[1:] == [14, 14, 512]
             assert conv5_2.get_shape().as_list()[1:] == [14, 14, 512]
             assert conv5_3.get_shape().as_list()[1:] == [14, 14, 512]
-            assert pool5.get_shape().as_list()[1:] == [7, 7, 512]
 
-        # TODO: Finish backward layers
-        # Backward first convolutional layer
-        # Backward second convolutional layer
-        # Backward third convolutional layer
-        # Backward fourth convolutional layer
-        # Backward fifth convolutional layer
+        # Backward upscale and convolutional layers
+        b_conv5_upscale = tf.image.resize_images(conv5_3, [28, 28, 512], method=training_resize_method)
+        b_conv4 = self.conv_layer(tf.add(conv4_3, b_conv5_upscale), "b_conv4")
+        b_conv4_upscale = tf.image.resize_images(b_conv4, [56, 56, 256], method=training_resize_method)
+        b_conv3 = self.conv_layer(tf.add(conv3_3, b_conv4_upscale), "b_conv3")
+        b_conv3_upscale = tf.image.resize_images(b_conv3, [112, 112, 128], method=training_resize_method)
+        b_conv2 = self.conv_layer(tf.add(conv2_2, b_conv3_upscale), "b_conv2")
+        b_conv2_upscale = tf.image.resize_images(b_conv2, [224, 224, 64], method=training_resize_method)
+        b_conv1 = self.conv_layer(tf.add(conv1_2, b_conv2_upscale), "b_conv1")
+        output_layer = self.conv_layer(tf.add(input_data, b_conv1), "output_layer")
 
-        return pool5
+        return output_layer
 
 
 if __name__ == '__main__':
@@ -237,6 +257,7 @@ if __name__ == '__main__':
     # Init placeholder for input and output
     x = tf.placeholder(tf.float32, [None, image_size, image_size, 1])
     y = tf.placeholder(tf.float32, [None, image_size, image_size, 2])
+    is_training = tf.placeholder(tf.bool)
 
     # Init residual encoder model
     residual_encoder = ResidualEncoder(train_y, train_uv)
@@ -257,14 +278,14 @@ if __name__ == '__main__':
         step = 1
         while step * batch_size < training_iters:
             batch_xs, batch_ys = residual_encoder.get_next_batch(batch_size)
-            sess.run(optimizer, feed_dict={x: batch_xs, y: batch_ys})
+            sess.run(optimizer, feed_dict={x: batch_xs, y: batch_ys, is_training: True})
             if step % display_step == 0:
-                acc = sess.run(accuracy, feed_dict={x: batch_xs, y: batch_ys})
-                loss = sess.run(cost, feed_dict={x: batch_xs, y: batch_ys})
+                acc = sess.run(accuracy, feed_dict={x: batch_xs, y: batch_ys, is_training: True})
+                loss = sess.run(cost, feed_dict={x: batch_xs, y: batch_ys, is_training: True})
                 print "Iter %d, Minibatch Loss = %f, Training Accuracy = %f" % (step, loss, acc)
                 step += 1
         print "Training Finished!"
 
         # Predict
         # TODO: Test with testing data
-        # print "Testing Accuracy: %f" % (sess.run(accuracy, feed_dict={x: 0, y: 0}))
+        # print "Testing Accuracy: %f" % (sess.run(accuracy, feed_dict={x: 0, y: 0, is_training: False}))
