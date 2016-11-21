@@ -391,7 +391,7 @@ if __name__ == '__main__':
                     train_writer.add_summary(summary, step)
                     train_writer.flush()
 
-            save_path = saver.save(sess, "/summary/model.ckpt")
+            save_path = saver.save(sess, "summary/model.ckpt")
             print "Training Finished! Model saved in file: %s" % save_path
 
             # Predict
