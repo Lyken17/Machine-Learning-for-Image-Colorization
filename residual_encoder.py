@@ -140,7 +140,9 @@ class ResidualEncoder(object):
         :param real_val: the real value
         :return: cost
         """
-        return tf.reduce_mean(tf.square(tf.sub(predict_val, real_val)))
+        diff = tf.sub(predict_val, real_val, name="diff")
+        square = tf.square(diff, name="square")
+        return tf.reduce_mean(square, name="cost")
 
     @staticmethod
     def get_accuracy(predict_val, real_val):
@@ -151,7 +153,9 @@ class ResidualEncoder(object):
         :return: accuracy
         """
         # TODO: Implement accuracy function
-        return tf.reduce_mean(tf.square(tf.sub(predict_val, real_val)))
+        diff = tf.sub(predict_val, real_val, name="diff")
+        square = tf.square(diff, name="square")
+        return tf.reduce_mean(square, name="accuracy")
 
     def conv_layer(self, layer_input, name):
         """
@@ -387,7 +391,9 @@ if __name__ == '__main__':
                     train_writer.add_summary(summary, step)
                     train_writer.flush()
 
-            print "Training Finished!"
+            save_path = saver.save(sess, "/summary/model.ckpt")
+            print "Training Finished! Model saved in file: %s" % save_path
+
             # Predict
             # TODO: Test with testing data
             # print "Testing Accuracy: %f" % (sess.run(accuracy, feed_dict={x: 0, y: 0, is_training: False}))
