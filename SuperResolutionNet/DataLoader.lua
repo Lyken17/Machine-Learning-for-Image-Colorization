@@ -1,4 +1,6 @@
---- Modified to load normalized YUV instead of RGB images
+--[[
+  Modified dataloader to load normalized YUV
+--]]
 require 'torch'
 require 'hdf5'
 require 'image'
@@ -37,7 +39,7 @@ function DataLoader:__init(opt)
 
   self.num_minibatches = {}
   for k, v in pairs(self.split_sizes) do
-    self.num_minibatches[k] = math.ceil(v / self.batch_size)
+    self.num_minibatches[k] = math.floor(v / self.batch_size)
   end
   
   if opt.max_train and opt.max_train > 0 then
@@ -78,8 +80,6 @@ function DataLoader:getBatch(split)
     uv[t][1] = torch.div(yuv[2],0.436)
     uv[t][2] = torch.div(yuv[3],0.615)
   end
-
-  -- Make the average 0
   y:add(-0.5)
   return y, uv
 end

@@ -1,9 +1,6 @@
 """
-Edited to exclude all gray images
-- Zeyu Zhao
-- Nov 16
+A better HDF5 file generator. Support recursive traversal of a given directory.
 """
-
 import os, json, argparse
 from threading import Thread
 from Queue import Queue
@@ -19,7 +16,7 @@ Create an HDF5 file of images for training a feedforward style transfer model.
 parser = argparse.ArgumentParser()
 parser.add_argument('--train_dir', default='train2014')
 parser.add_argument('--val_dir', default='val2014')
-parser.add_argument('--output_file', default='ms-coco-256.h5')
+parser.add_argument('--output_file', default='coco.h5')
 parser.add_argument('--height', type=int, default=256)
 parser.add_argument('--width', type=int, default=256)
 parser.add_argument('--max_images', type=int, default=-1)
@@ -27,16 +24,24 @@ parser.add_argument('--num_workers', type=int, default=2)
 parser.add_argument('--include_val', type=int, default=1)
 parser.add_argument('--max_resize', default=16, type=int)
 args = parser.parse_args()
-
+image_extensions = {'.jpg', '.jpeg', '.JPG', '.JPEG', '.png', '.PNG'}
+def genlist(image_dir):
+  image_list = []
+  for filename in os.listdir(image_dir):
+    path = os.path.join(image_dir,filename)
+    if os.path.isdir(path):
+      image_list = image_list + genlist(path)
+    else:
+      ext = os.path.splitext(filename)[1]
+      if ext in image_extensions:
+        image_list.append(os.path.join(image_dir, filename))
+  return image_list
 
 def add_data(h5_file, image_dir, prefix, args):
   # Make a list of all images in the source directory
-  image_list = []
-  image_extensions = {'.jpg', '.jpeg', '.JPG', '.JPEG', '.png', '.PNG'}
-  for filename in os.listdir(image_dir):
-    ext = os.path.splitext(filename)[1]
-    if ext in image_extensions:
-      image_list.append(os.path.join(image_dir, filename))
+  image_list = genlist(image_dir)
+  # Shuffle to mix images for different styles
+  np.random.shuffle(image_list)
   num_images = len(image_list)
 
   # Resize all images and copy them into the hdf5 file

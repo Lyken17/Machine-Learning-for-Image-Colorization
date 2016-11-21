@@ -1,8 +1,6 @@
 --[[
 Deploy the model...
 
-- Zeyu Zhao.
-- Nov. 18.
 --]]
 require 'torch'
 require 'nn'
@@ -19,7 +17,7 @@ directory of images.
 local cmd = torch.CmdLine()
 
 -- Model options
-cmd:option('-model', 'checkpoint.t7')
+cmd:option('-model', 'model.t7')
 
 -- Input / output options
 cmd:option('-input_image', '')
@@ -66,12 +64,13 @@ local function main()
     local img_pre = img:view(1, 1, H, W):type(dtype)
     local uv = model:forward(torch.add(img_pre,-0.5))
     uv = uv:type('torch.DoubleTensor'):view(2,uv:size(3),uv:size(4))
+    uv[1]:mul(0.436)
+    uv[2]:mul(0.615)
     img_pre = img_pre:type('torch.DoubleTensor'):view(1,H,W)
     uv = image.scale(uv,W,H)
     local img_out = torch.cat(img_pre,uv,1)
     img_out = image.yuv2rgb(img_out)
     
-
     print('Writing output image to ' .. out_path)
     local out_dir = paths.dirname(out_path)
     if not path.isdir(out_dir) then

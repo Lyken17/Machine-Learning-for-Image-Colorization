@@ -1,6 +1,3 @@
---[[
-Copied from Johnson's project
---]]
 require 'torch'
 require 'nn'
 local cjson = require 'cjson'

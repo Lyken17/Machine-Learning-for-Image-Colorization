@@ -1,12 +1,3 @@
---[[
-Neural Net Structure Modification:
-- Remove TotalVariation and InstantNorm layer. We don't need it for colorization
-- Remove MulConstant layer. Tanh range is [-1,1]. Enough for UV prediction
-
--Zeyu Zhao
--Nov. 18.
---]]
-
 require 'nn'
 require 'ShaveImage'
 
@@ -129,6 +120,7 @@ function M.build_model(opt)
   end
 
   model:add(nn.Tanh())
+  
 
   return model
 end

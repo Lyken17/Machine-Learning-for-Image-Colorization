@@ -1,8 +1,5 @@
 --[[
-To calculate test error.
-
-- Zeyu Zhao.
-- Nov 16.
+To calculate test error. MSE of UV matrix
 --]]
 require 'torch'
 require 'image'
@@ -15,7 +12,7 @@ local cmd = torch.CmdLine()
 
 -- Model options
 cmd:option('-model', 'checkpoint.t7')
-cmd:option('-h5_file', 'ms-coco-256.h5')
+cmd:option('-h5_file', 'coco.h5')
 
 -- Verify back_size images once
 cmd:option('-batch_size', 30)
