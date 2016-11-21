@@ -183,7 +183,7 @@ class ResidualEncoder(object):
                        lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
                                           activation_fn=tf.nn.relu, updates_collections=None, scope=scope),
                        lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
-                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope, reuse=True))
+                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope, reuse=True), name='batch_normalization')
 
     def build(self, input_data):
         """
@@ -256,34 +256,42 @@ class ResidualEncoder(object):
 
         # Backward upscale layer 5 and convolutional layers 4
         b_conv5_upscale = tf.image.resize_images(conv5_3, [28, 28], method=training_resize_method)
-        b_conv4 = self.conv_layer(tf.add(conv4_3, b_conv5_upscale), "b_conv4")
+        b_conv4_input = tf.add(conv4_3, b_conv5_upscale, name="b_conv4_input")
+        b_conv4 = self.conv_layer(b_conv4_input, "b_conv4")
 
         if debug:
             assert b_conv5_upscale.get_shape().as_list()[1:] == [28, 28, 512]
+            assert b_conv4_input.get_shape().as_list()[1:] == [28, 28, 512]
             assert b_conv4.get_shape().as_list()[1:] == [28, 28, 256]
 
         # Backward upscale layer 4 and convolutional layers 3
         b_conv4_upscale = tf.image.resize_images(b_conv4, [56, 56], method=training_resize_method)
-        b_conv3 = self.conv_layer(tf.add(conv3_3, b_conv4_upscale), "b_conv3")
+        b_conv3_input = tf.add(conv3_3, b_conv4_upscale, name="b_conv3_input")
+        b_conv3 = self.conv_layer(b_conv3_input, "b_conv3")
 
         if debug:
             assert b_conv4_upscale.get_shape().as_list()[1:] == [56, 56, 256]
+            assert b_conv3_input.get_shape().as_list()[1:] == [56, 56, 256]
             assert b_conv3.get_shape().as_list()[1:] == [56, 56, 128]
 
         # Backward upscale layer 3 and convolutional layers 2
         b_conv3_upscale = tf.image.resize_images(b_conv3, [112, 112], method=training_resize_method)
-        b_conv2 = self.conv_layer(tf.add(conv2_2, b_conv3_upscale), "b_conv2")
+        b_conv2_input = tf.add(conv2_2, b_conv3_upscale, name="b_conv2_input")
+        b_conv2 = self.conv_layer(b_conv2_input, "b_conv2")
 
         if debug:
             assert b_conv3_upscale.get_shape().as_list()[1:] == [112, 112, 128]
+            assert b_conv2_input.get_shape().as_list()[1:] == [112, 112, 128]
             assert b_conv2.get_shape().as_list()[1:] == [112, 112, 64]
 
         # Backward upscale layer 2 and convolutional layers 1
         b_conv2_upscale = tf.image.resize_images(b_conv2, [224, 224], method=training_resize_method)
-        b_conv1 = self.conv_layer(tf.add(conv1_2, b_conv2_upscale), "b_conv1")
+        b_conv1_input = tf.add(conv1_2, b_conv2_upscale, name="b_conv1_input")
+        b_conv1 = self.conv_layer(b_conv1_input, "b_conv1")
 
         if debug:
             assert b_conv2_upscale.get_shape().as_list()[1:] == [224, 224, 64]
+            assert b_conv1_input.get_shape().as_list()[1:] == [224, 224, 64]
             assert b_conv1.get_shape().as_list()[1:] == [224, 224, 3]
 
         # Output layer

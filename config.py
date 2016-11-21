@@ -19,7 +19,7 @@ image_size = 224
 
 # Parameters for neural network
 learning_rate = 0.1
-training_iters = 50
+training_iters = 100
 batch_size = 6
 dequeue_buffer_size = 1000
 display_step = 1
