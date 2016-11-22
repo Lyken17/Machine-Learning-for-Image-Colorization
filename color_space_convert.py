@@ -21,9 +21,9 @@ def rgb_to_yuv(rgb_image):
     _b = tf.slice(rgb_image, [0, 0, 2], [_w, _h, 1])
 
     # Calculate y, u, v channel
-    _y = (0.257 * _r) + (0.504 * _g) + (0.098 * _b) + 16
-    _v = (0.439 * _r) - (0.368 * _g) - (0.071 * _b) + 128
-    _u = -(0.148 * _r) - (0.291 * _g) + (0.439 * _b) + 128
+    _y = (0.299 * _r) + (0.587 * _g) + (0.114 * _b)
+    _u = (-0.14713 * _r) - (0.28886 * _g) + (0.436 * _b)
+    _v = (0.615 * _r) - (0.51499 * _g) - (0.10001 * _b)
 
     # Get image with yuv color space
     _yuv = tf.concat(concat_dim=2, values=[_y, _u, _v])

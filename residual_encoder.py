@@ -142,20 +142,7 @@ class ResidualEncoder(object):
         """
         diff = tf.sub(predict_val, real_val, name="diff")
         square = tf.square(diff, name="square")
-        return tf.reduce_mean(square, name="cost")
-
-    @staticmethod
-    def get_accuracy(predict_val, real_val):
-        """
-        Accuracy function
-        :param predict_val: the predict value
-        :param real_val: the real value
-        :return: accuracy
-        """
-        # TODO: Implement accuracy function
-        diff = tf.sub(predict_val, real_val, name="diff")
-        square = tf.square(diff, name="square")
-        return tf.reduce_mean(square, name="accuracy")
+        return tf.div(tf.reduce_mean(square, name="cost"), batch_size, name="cost_per_batch")
 
     def conv_layer(self, layer_input, name):
         """
@@ -167,9 +154,6 @@ class ResidualEncoder(object):
         with tf.variable_scope(name):
             weight = self.get_weight(name)
             output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME')
-            # conv_biases = self.get_bias(name)
-            # output = tf.nn.bias_add(output, conv_biases)
-            # output = tf.nn.relu(output)
             output = self.batch_normal(output, training_flag=is_training, scope=name)
             return output
 
@@ -311,24 +295,30 @@ class ResidualEncoder(object):
 
 if __name__ == '__main__':
     # Init image data file path
+    print "Init file path"
     train_file_paths = init_file_path(train_dir)
     test_file_paths = init_file_path(test_dir)
 
     # Init placeholder and global step
+    print "Init placeholder"
+    x = tf.placeholder(tf.float32, [None, image_size, image_size, 1], name="x")
+    y = tf.placeholder(tf.float32, [None, image_size, image_size, 2], name="y")
     is_training = tf.placeholder(tf.bool, name="training_flag")
     global_step = tf.Variable(0, name='global_step', trainable=False)
 
     # Init residual encoder model
+    print "Init residual encoder model"
     residual_encoder = ResidualEncoder()
 
-    # Make predict, cost and training model
+    # Create predict, cost and training model
+    print "Create predict, cost and training model"
     batch_xs, batch_ys = get_y_and_uv_data(train_file_paths, batch_size)
-    predict = residual_encoder.build(input_data=batch_xs)
-    cost = residual_encoder.get_cost(predict_val=predict, real_val=batch_ys)
-    accuracy = residual_encoder.get_accuracy(predict_val=predict, real_val=batch_ys)
+    predict = residual_encoder.build(input_data=x)
+    cost = residual_encoder.get_cost(predict_val=predict, real_val=y)
     optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost, global_step=global_step)
 
     # Summaries
+    print "Init summaries"
     tf.histogram_summary("conv1_1", weights["conv1_1"])
     tf.histogram_summary("conv1_2", weights["conv1_2"])
     tf.histogram_summary("conv2_1", weights["conv2_1"])
@@ -353,9 +343,11 @@ if __name__ == '__main__':
     # tf.image_summary("grayscale", grayscale_rgb, max_images=1)
 
     # Saver
+    print "Init model saver"
     saver = tf.train.Saver()
 
-    # Create the graph, etc
+    # Init the graph
+    print "Init graph"
     init = tf.initialize_all_variables()
 
     # Create a session for running operations in the Graph
@@ -364,27 +356,44 @@ if __name__ == '__main__':
         sess.run(init)
 
         # Merge all summaries
+        print "Merge all summaries"
         merged = tf.merge_all_summaries()
         train_writer = tf.train.SummaryWriter("summary/train", sess.graph)
         test_writer = tf.train.SummaryWriter("summary/test")
 
         # Start input enqueue threads.
+        print "Start input enqueue threads"
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
         # Start training
         print "Start training!!!"
+        # TODO: remove those debug variable
+        max_y = 0
+        min_y = 0
+        max_u = 0
+        min_u = 0
+        max_v = 0
+        min_v = 0
 
         try:
             while not coord.should_stop():
                 step = sess.run(global_step)
                 if step == training_iters:
                     break
-                sess.run(optimizer, feed_dict={is_training: True})
+                batch_x, batch_y = sess.run([batch_xs, batch_ys])
+                _uu = tf.slice(batch_y, [0, 0, 0, 0], [-1, -1, -1, 1])
+                _vv = tf.slice(batch_y, [0, 0, 0, 1], [-1, -1, -1, 1])
+                max_y = np.maximum(sess.run(tf.reduce_max(batch_x)), max_y)
+                min_y = np.minimum(sess.run(tf.reduce_min(batch_x)), min_y)
+                max_u = np.maximum(sess.run(tf.reduce_max(_uu)), max_u)
+                min_u = np.minimum(sess.run(tf.reduce_min(_uu)), min_u)
+                max_v = np.maximum(sess.run(tf.reduce_max(_vv)), max_v)
+                min_v = np.minimum(sess.run(tf.reduce_min(_vv)), min_v)
+                sess.run(optimizer, feed_dict={x: batch_x, y: batch_y, is_training: True})
                 if step % display_step == 0:
-                    loss, acc, summary = sess.run([cost, accuracy, merged], feed_dict={is_training: True})
-                    print "Iter %d, Minibatch Loss = %f, Training Accuracy = %f" % \
-                          (step, loss, acc)
+                    loss, summary = sess.run([cost, merged], feed_dict={x: batch_x, y: batch_y, is_training: True})
+                    print "Iter %d, Minibatch Loss = %f" % (step, loss)
                 #    summary_image = concat_images(gray_image[0], pred_image[0])
                 #    summary_image = concat_images(summary_image, color_image[0])
                 #    plt.imsave("summary/result/" + str(step) + "_0", summary_image)
@@ -399,11 +408,16 @@ if __name__ == '__main__':
             # print "Testing Accuracy: %f" % (sess.run(accuracy, feed_dict={x: 0, y: 0, is_training: False}))
         except tf.errors.OUT_OF_RANGE as e:
             # Handle exception
-            print('Done training -- epoch limit reached')
+            print "Done training -- epoch limit reached"
             coord.request_stop(e)
         finally:
             # When done, ask the threads to stop.
             coord.request_stop()
+
+        # TODO: remove those debug output
+        print "Y in %f - %f" % (min_y, max_y)
+        print "U in %f - %f" % (min_u, max_u)
+        print "V in %f - %f" % (min_v, max_v)
 
     # Wait for threads to finish.
     coord.join(threads)
