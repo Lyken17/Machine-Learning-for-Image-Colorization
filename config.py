@@ -29,6 +29,11 @@ test_iters = 10
 input_resize_method = ResizeMethod.BILINEAR
 training_resize_method = ResizeMethod.BILINEAR
 
+# YUV normalization parameters
+y_norm_para = 0.5
+u_norm_para = 0.436
+v_norm_para = 0.615
+
 # Directory for training and testing dataset
 train_dir = "train2014"
 test_dir = "val2014"

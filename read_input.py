@@ -78,9 +78,9 @@ def get_y_and_uv_data(filenames, b_size):
     channel_u = tf.slice(_yuv, [0, 0, 0, 1], [-1, -1, -1, 1])
     channel_v = tf.slice(_yuv, [0, 0, 0, 2], [-1, -1, -1, 1])
     # Normalize channels
-    channel_y = tf.mul(tf.sub(channel_y, 0.5), 2.0, name="channel_y")
-    channel_u = tf.div(channel_u, 0.436, name="channel_u")
-    channel_v = tf.div(channel_v, 0.615, name="channel_v")
+    channel_y = tf.mul(tf.sub(channel_y, y_norm_para), 2.0, name="channel_y")
+    channel_u = tf.div(channel_u, u_norm_para, name="channel_u")
+    channel_v = tf.div(channel_v, v_norm_para, name="channel_v")
     # Add channel data
     channel_uv = tf.concat(concat_dim=3, values=[channel_u, channel_v], name="channel_uv")
     return channel_y, channel_uv

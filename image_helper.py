@@ -2,8 +2,9 @@
 Helper functions for image manipulation
 """
 
-import numpy as np
 import tensorflow as tf
+
+from config import *
 
 
 def rgb_to_yuv(rgb_image):
@@ -32,10 +33,11 @@ def rgb_to_yuv(rgb_image):
     return _yuv
 
 
-def yuv_to_rgb(yuv_image):
+def yuv_to_rgb(yuv_image, gray=False):
     """
     Convert image color space from YUV to RGB
     :param yuv_image: an image with YUV color space
+    :param gray: return gray image
     :return: an image with RGB color space
     """
     # Get width and height for image
@@ -47,10 +49,18 @@ def yuv_to_rgb(yuv_image):
     _u = tf.slice(yuv_image, [0, 0, 1], [_w, _h, 1])
     _v = tf.slice(yuv_image, [0, 0, 2], [_w, _h, 1])
 
+    # Denormalize y, u, v channels
+    _y = tf.add(tf.div(_y, 2.0), y_norm_para)
+    _u = tf.mul(_u, u_norm_para)
+    _v = tf.mul(_v, v_norm_para)
+
     # Calculate r, g, b channel
-    _r = _y + 1.13983 * _v
-    _g = _y - 0.39464 * _u - 0.58060 * _v
-    _b = _y + 2.03211 * _u
+    if not gray:
+        _r = _y + 1.13983 * _v
+        _g = _y - 0.39464 * _u - 0.58060 * _v
+        _b = _y + 2.03211 * _u
+    else:
+        _r = _g = _b = _y
 
     # Get image with RGB color space
     _rgb = tf.concat(concat_dim=2, values=[_r, _g, _b])
@@ -66,5 +76,4 @@ def concat_images(img_a, img_b):
     :param img_b: image b on right
     :return: combined image
     """
-    new_img = tf.concat(concat_dim=0, values=[img_a, img_b])
-    return new_img
+    return tf.concat(concat_dim=1, values=[img_a, img_b])
