@@ -1,5 +1,5 @@
 """
-Config file for residual-encoder model
+Config file
 """
 
 from sys import float_info
@@ -23,10 +23,11 @@ training_iters = 1000
 batch_size = 6
 dequeue_buffer_size = 1000
 display_step = 1
+test_iters = 10
 
 # Image resize method
-input_resize_method = ResizeMethod.NEAREST_NEIGHBOR
-training_resize_method = ResizeMethod.NEAREST_NEIGHBOR
+input_resize_method = ResizeMethod.BILINEAR
+training_resize_method = ResizeMethod.BILINEAR
 
 # Directory for training and testing dataset
 train_dir = "train2014"
@@ -53,20 +54,3 @@ weights = {
     'b_conv1': tf.Variable(tf.random_normal([3, 3, 64, 3])),
     'b_conv0': tf.Variable(tf.random_normal([3, 3, 3, 3])),
 }
-
-# Biases for each layer
-# biases = {
-#     'conv1_1': tf.Variable(tf.random_normal([64])),
-#     'conv1_2': tf.Variable(tf.random_normal([64])),
-#     'conv2_1': tf.Variable(tf.random_normal([128])),
-#     'conv2_2': tf.Variable(tf.random_normal([128])),
-#     'conv3_1': tf.Variable(tf.random_normal([256])),
-#     'conv3_2': tf.Variable(tf.random_normal([256])),
-#     'conv3_3': tf.Variable(tf.random_normal([256])),
-#     'conv4_1': tf.Variable(tf.random_normal([512])),
-#     'conv4_2': tf.Variable(tf.random_normal([512])),
-#     'conv4_3': tf.Variable(tf.random_normal([512])),
-#     'conv5_1': tf.Variable(tf.random_normal([512])),
-#     'conv5_2': tf.Variable(tf.random_normal([512])),
-#     'conv5_3': tf.Variable(tf.random_normal([512])),
-# }

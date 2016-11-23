@@ -5,109 +5,9 @@ See extensive documentation at
 http://tinyclouds.org/colorize/
 """
 
-import os
-
-import numpy as np
 from tensorflow.contrib.layers import batch_norm
-from matplotlib import pyplot as plt
 
-from color_space_convert import rgb_to_yuv
 from config import *
-
-
-def init_file_path(directory):
-    """
-    Get the image file path array
-    :param directory: the directory that store images
-    :return: an array of image file path
-    """
-    paths = []
-    for file in os.listdir(directory):
-        # Skip files that is not jpg
-        if not file.endswith('.jpg'):
-            continue
-        file_path = '%s/%s' % (directory, file)
-        paths.append(file_path)
-    return paths
-
-
-def read_image(filename_queue):
-    """
-    Read and store image with YUV color space
-    :param filename_queue: the filename queue for image files
-    :return: image with YUV color space
-    """
-    # Read the image with RGB color space
-    reader = tf.WholeFileReader()
-    key, content = reader.read(filename_queue)
-    rgb_image = tf.image.decode_jpeg(content, channels=3)
-    # Make pixel element value in [0, 1)
-    rgb_image = tf.image.convert_image_dtype(rgb_image, tf.float32)
-    # Resize image to the right image_size
-    rgb_image = tf.image.resize_images(rgb_image, [image_size, image_size], method=input_resize_method)
-    # Change color space to YUV
-    yuv_image = rgb_to_yuv(rgb_image)
-    return yuv_image
-
-
-def input_pipeline(filenames, b_size, num_epochs=None, shuffle=True):
-    """
-    Use a queue that randomizes the order of examples and return batch of images
-    :param filenames: filenames
-    :param b_size: batch size
-    :param num_epochs: number of epochs for producing each string before generating an OutOfRange error
-    :param shuffle: if true, the strings are randomly shuffled within each epoch
-    :return: a batch of yuv_images
-    """
-    filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_epochs, shuffle=shuffle)
-    yuv_image = read_image(filename_queue)
-    min_after_dequeue = dequeue_buffer_size
-    capacity = min_after_dequeue + 3 * b_size
-    image_batch = tf.train.shuffle_batch([yuv_image],
-                                         batch_size=b_size,
-                                         capacity=capacity,
-                                         shapes=[image_size, image_size, 3],
-                                         min_after_dequeue=min_after_dequeue)
-    return image_batch
-
-
-def get_y_and_uv_data(filenames, b_size):
-    """
-    Get the input data with Y channel and target data with UV channels
-    :param filenames: the path for the image file
-    :param b_size: batch size
-    :return: input data with Y channel and target data with UV channels
-    """
-    # Get the image with YUV channels
-    _yuv = input_pipeline(filenames, b_size)
-    # Split channels
-    channel_y = tf.slice(_yuv, [0, 0, 0, 0], [-1, -1, -1, 1])
-    channel_u = tf.slice(_yuv, [0, 0, 0, 1], [-1, -1, -1, 1])
-    channel_v = tf.slice(_yuv, [0, 0, 0, 2], [-1, -1, -1, 1])
-    # Normalize channels
-    channel_y = tf.mul(tf.sub(channel_y, 0.5), 2.0, name="channel_y")
-    channel_u = tf.div(channel_u, 0.436, name="channel_u")
-    channel_v = tf.div(channel_v, 0.615, name="channel_v")
-    # Add channel data
-    channel_uv = tf.concat(concat_dim=3, values=[channel_u, channel_v], name="channel_uv")
-    return channel_y, channel_uv
-
-
-def concat_images(img_a, img_b):
-    """
-    Combines two color image side-by-side.
-    :param img_a: image a on left
-    :param img_b: image b on right
-    :return: combined image
-    """
-    height_a, width_a = img_a.shape[:2]
-    height_b, width_b = img_b.shape[:2]
-    max_height = np.max([height_a, height_b])
-    total_width = width_a + width_b
-    new_img = np.zeros(shape=(max_height, total_width, 3), dtype=np.float32)
-    new_img[:height_a, :width_a] = img_a
-    new_img[:height_b, width_a:total_width] = img_b
-    return new_img
 
 
 class ResidualEncoder(object):
@@ -123,15 +23,6 @@ class ResidualEncoder(object):
         """
         return weights[name]
 
-    # @staticmethod
-    # def get_bias(name):
-    #     """
-    #     Get bias for one layer
-    #     :param name: the name of the layer
-    #     :return: the initial bias for this layer
-    #     """
-    #     return biases[name]
-
     @staticmethod
     def get_cost(predict_val, real_val):
         """
@@ -144,20 +35,16 @@ class ResidualEncoder(object):
         square = tf.square(diff, name="square")
         return tf.div(tf.reduce_mean(square, name="cost"), batch_size, name="cost_per_batch")
 
-    def conv_layer(self, layer_input, name):
-        """
-        Convolution layer
-        :param layer_input: the input data for this layer
-        :param name: name for this layer
-        :return: the layer data after convolution
-        """
-        with tf.variable_scope(name):
-            weight = self.get_weight(name)
-            output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME')
-            output = self.batch_normal(output, training_flag=is_training, scope=name)
-            return output
+    @staticmethod
+    def batch_normal(input_data, training_flag, scope):
+        return tf.cond(training_flag,
+                       lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
+                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope),
+                       lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
+                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope, reuse=True), name='batch_normalization')
 
-    def max_pool(self, layer_input, name):
+    @staticmethod
+    def max_pool(layer_input, name):
         """
         Polling layer
         :param layer_input: the input data for this layer
@@ -166,17 +53,25 @@ class ResidualEncoder(object):
         """
         return tf.nn.max_pool(layer_input, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
 
-    def batch_normal(self, input_data, training_flag, scope):
-        return tf.cond(training_flag,
-                       lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
-                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope),
-                       lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
-                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope, reuse=True), name='batch_normalization')
+    def conv_layer(self, layer_input, name, is_training):
+        """
+        Convolution layer
+        :param layer_input: the input data for this layer
+        :param name: name for this layer
+        :param is_training: a flag indicate if now is in training
+        :return: the layer data after convolution
+        """
+        with tf.variable_scope(name):
+            weight = self.get_weight(name)
+            output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME')
+            output = self.batch_normal(output, training_flag=is_training, scope=name)
+            return output
 
-    def build(self, input_data):
+    def build(self, input_data, is_training):
         """
         Build the residual encoder model
         :param input_data: input data for first layer
+        :param is_training: a flag indicate if now is in training
         :return: None
         """
         if debug:
@@ -189,8 +84,8 @@ class ResidualEncoder(object):
             assert input_data.get_shape().as_list()[1:] == [224, 224, 3]
 
         # First convolutional layer
-        conv1_1 = self.conv_layer(input_data, "conv1_1")
-        conv1_2 = self.conv_layer(conv1_1, "conv1_2")
+        conv1_1 = self.conv_layer(input_data, "conv1_1", is_training)
+        conv1_2 = self.conv_layer(conv1_1, "conv1_2", is_training)
         pool1 = self.max_pool(conv1_2, 'pool1')
 
         if debug:
@@ -199,8 +94,8 @@ class ResidualEncoder(object):
             assert pool1.get_shape().as_list()[1:] == [112, 112, 64]
 
         # Second convolutional layer
-        conv2_1 = self.conv_layer(pool1, "conv2_1")
-        conv2_2 = self.conv_layer(conv2_1, "conv2_2")
+        conv2_1 = self.conv_layer(pool1, "conv2_1", is_training)
+        conv2_2 = self.conv_layer(conv2_1, "conv2_2", is_training)
         pool2 = self.max_pool(conv2_2, 'pool2')
 
         if debug:
@@ -209,9 +104,9 @@ class ResidualEncoder(object):
             assert pool2.get_shape().as_list()[1:] == [56, 56, 128]
 
         # Third convolutional layer
-        conv3_1 = self.conv_layer(pool2, "conv3_1")
-        conv3_2 = self.conv_layer(conv3_1, "conv3_2")
-        conv3_3 = self.conv_layer(conv3_2, "conv3_3")
+        conv3_1 = self.conv_layer(pool2, "conv3_1", is_training)
+        conv3_2 = self.conv_layer(conv3_1, "conv3_2", is_training)
+        conv3_3 = self.conv_layer(conv3_2, "conv3_3", is_training)
         pool3 = self.max_pool(conv3_3, 'pool3')
 
         if debug:
@@ -221,9 +116,9 @@ class ResidualEncoder(object):
             assert pool3.get_shape().as_list()[1:] == [28, 28, 256]
 
         # Fourth convolutional layer
-        conv4_1 = self.conv_layer(pool3, "conv4_1")
-        conv4_2 = self.conv_layer(conv4_1, "conv4_2")
-        conv4_3 = self.conv_layer(conv4_2, "conv4_3")
+        conv4_1 = self.conv_layer(pool3, "conv4_1", is_training)
+        conv4_2 = self.conv_layer(conv4_1, "conv4_2", is_training)
+        conv4_3 = self.conv_layer(conv4_2, "conv4_3", is_training)
         pool4 = self.max_pool(conv4_3, 'pool4')
 
         if debug:
@@ -233,9 +128,9 @@ class ResidualEncoder(object):
             assert pool4.get_shape().as_list()[1:] == [14, 14, 512]
 
         # Fifth convolutional layer
-        conv5_1 = self.conv_layer(pool4, "conv5_1")
-        conv5_2 = self.conv_layer(conv5_1, "conv5_2")
-        conv5_3 = self.conv_layer(conv5_2, "conv5_3")
+        conv5_1 = self.conv_layer(pool4, "conv5_1", is_training)
+        conv5_2 = self.conv_layer(conv5_1, "conv5_2", is_training)
+        conv5_3 = self.conv_layer(conv5_2, "conv5_3", is_training)
 
         if debug:
             assert conv5_1.get_shape().as_list()[1:] == [14, 14, 512]
@@ -245,7 +140,7 @@ class ResidualEncoder(object):
         # Backward upscale layer 5 and convolutional layers 4
         b_conv5_upscale = tf.image.resize_images(conv5_3, [28, 28], method=training_resize_method)
         b_conv4_input = tf.add(conv4_3, b_conv5_upscale, name="b_conv4_input")
-        b_conv4 = self.conv_layer(b_conv4_input, "b_conv4")
+        b_conv4 = self.conv_layer(b_conv4_input, "b_conv4", is_training)
 
         if debug:
             assert b_conv5_upscale.get_shape().as_list()[1:] == [28, 28, 512]
@@ -255,7 +150,7 @@ class ResidualEncoder(object):
         # Backward upscale layer 4 and convolutional layers 3
         b_conv4_upscale = tf.image.resize_images(b_conv4, [56, 56], method=training_resize_method)
         b_conv3_input = tf.add(conv3_3, b_conv4_upscale, name="b_conv3_input")
-        b_conv3 = self.conv_layer(b_conv3_input, "b_conv3")
+        b_conv3 = self.conv_layer(b_conv3_input, "b_conv3", is_training)
 
         if debug:
             assert b_conv4_upscale.get_shape().as_list()[1:] == [56, 56, 256]
@@ -265,7 +160,7 @@ class ResidualEncoder(object):
         # Backward upscale layer 3 and convolutional layers 2
         b_conv3_upscale = tf.image.resize_images(b_conv3, [112, 112], method=training_resize_method)
         b_conv2_input = tf.add(conv2_2, b_conv3_upscale, name="b_conv2_input")
-        b_conv2 = self.conv_layer(b_conv2_input, "b_conv2")
+        b_conv2 = self.conv_layer(b_conv2_input, "b_conv2", is_training)
 
         if debug:
             assert b_conv3_upscale.get_shape().as_list()[1:] == [112, 112, 128]
@@ -275,7 +170,7 @@ class ResidualEncoder(object):
         # Backward upscale layer 2 and convolutional layers 1
         b_conv2_upscale = tf.image.resize_images(b_conv2, [224, 224], method=training_resize_method)
         b_conv1_input = tf.add(conv1_2, b_conv2_upscale, name="b_conv1_input")
-        b_conv1 = self.conv_layer(b_conv1_input, "b_conv1")
+        b_conv1 = self.conv_layer(b_conv1_input, "b_conv1", is_training)
 
         if debug:
             assert b_conv2_upscale.get_shape().as_list()[1:] == [224, 224, 64]
@@ -283,7 +178,7 @@ class ResidualEncoder(object):
             assert b_conv1.get_shape().as_list()[1:] == [224, 224, 3]
 
         # Output layer
-        b_conv0 = self.conv_layer(tf.add(input_data, b_conv1), "b_conv0")
+        b_conv0 = self.conv_layer(tf.add(input_data, b_conv1), "b_conv0", is_training)
 
         if debug:
             assert b_conv0.get_shape().as_list()[1:] == [224, 224, 3]
@@ -291,134 +186,3 @@ class ResidualEncoder(object):
         output_layer = tf.tanh(tf.slice(b_conv0, [0, 0, 0, 1], [-1, -1, -1, 2]), name='output_layer')
 
         return output_layer
-
-
-if __name__ == '__main__':
-    # Init image data file path
-    print "Init file path"
-    train_file_paths = init_file_path(train_dir)
-    test_file_paths = init_file_path(test_dir)
-
-    # Init placeholder and global step
-    print "Init placeholder"
-    x = tf.placeholder(tf.float32, [None, image_size, image_size, 1], name="x")
-    y = tf.placeholder(tf.float32, [None, image_size, image_size, 2], name="y")
-    is_training = tf.placeholder(tf.bool, name="training_flag")
-    global_step = tf.Variable(0, name='global_step', trainable=False)
-
-    # Init residual encoder model
-    print "Init residual encoder model"
-    residual_encoder = ResidualEncoder()
-
-    # Create predict, cost and training model
-    print "Create predict, cost and training model"
-    batch_xs, batch_ys = get_y_and_uv_data(train_file_paths, batch_size)
-    predict = residual_encoder.build(input_data=x)
-    cost = residual_encoder.get_cost(predict_val=predict, real_val=y)
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost, global_step=global_step)
-
-    # Summaries
-    print "Init summaries"
-    tf.histogram_summary("conv1_1", weights["conv1_1"])
-    tf.histogram_summary("conv1_2", weights["conv1_2"])
-    tf.histogram_summary("conv2_1", weights["conv2_1"])
-    tf.histogram_summary("conv2_2", weights["conv2_2"])
-    tf.histogram_summary("conv3_1", weights["conv3_1"])
-    tf.histogram_summary("conv3_2", weights["conv3_2"])
-    tf.histogram_summary("conv3_3", weights["conv3_3"])
-    tf.histogram_summary("conv4_1", weights["conv4_1"])
-    tf.histogram_summary("conv4_2", weights["conv4_2"])
-    tf.histogram_summary("conv4_3", weights["conv4_3"])
-    tf.histogram_summary("conv5_1", weights["conv5_1"])
-    tf.histogram_summary("conv5_2", weights["conv5_2"])
-    tf.histogram_summary("conv5_3", weights["conv5_3"])
-    tf.histogram_summary("b_conv4", weights["b_conv4"])
-    tf.histogram_summary("b_conv3", weights["b_conv3"])
-    tf.histogram_summary("b_conv2", weights["b_conv2"])
-    tf.histogram_summary("b_conv1", weights["b_conv1"])
-    tf.histogram_summary("b_conv0", weights["b_conv0"])
-    tf.histogram_summary("cost", cost)
-    # tf.image_summary("colorimage", colorimage, max_images=1)
-    # tf.image_summary("pred_rgb", pred_rgb, max_images=1)
-    # tf.image_summary("grayscale", grayscale_rgb, max_images=1)
-
-    # Saver
-    print "Init model saver"
-    saver = tf.train.Saver()
-
-    # Init the graph
-    print "Init graph"
-    init = tf.initialize_all_variables()
-
-    # Create a session for running operations in the Graph
-    with tf.Session() as sess:
-        # Initialize the variables.
-        sess.run(init)
-
-        # Merge all summaries
-        print "Merge all summaries"
-        merged = tf.merge_all_summaries()
-        train_writer = tf.train.SummaryWriter("summary/train", sess.graph)
-        test_writer = tf.train.SummaryWriter("summary/test")
-
-        # Start input enqueue threads.
-        print "Start input enqueue threads"
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-
-        # Start training
-        print "Start training!!!"
-        # TODO: remove those debug variable
-        max_y = 0
-        min_y = 0
-        max_u = 0
-        min_u = 0
-        max_v = 0
-        min_v = 0
-
-        try:
-            while not coord.should_stop():
-                step = sess.run(global_step)
-                if step == training_iters:
-                    break
-                batch_x, batch_y = sess.run([batch_xs, batch_ys])
-                _uu = tf.slice(batch_y, [0, 0, 0, 0], [-1, -1, -1, 1])
-                _vv = tf.slice(batch_y, [0, 0, 0, 1], [-1, -1, -1, 1])
-                max_y = np.maximum(sess.run(tf.reduce_max(batch_x)), max_y)
-                min_y = np.minimum(sess.run(tf.reduce_min(batch_x)), min_y)
-                max_u = np.maximum(sess.run(tf.reduce_max(_uu)), max_u)
-                min_u = np.minimum(sess.run(tf.reduce_min(_uu)), min_u)
-                max_v = np.maximum(sess.run(tf.reduce_max(_vv)), max_v)
-                min_v = np.minimum(sess.run(tf.reduce_min(_vv)), min_v)
-                sess.run(optimizer, feed_dict={x: batch_x, y: batch_y, is_training: True})
-                if step % display_step == 0:
-                    loss, summary = sess.run([cost, merged], feed_dict={x: batch_x, y: batch_y, is_training: True})
-                    print "Iter %d, Minibatch Loss = %f" % (step, loss)
-                #    summary_image = concat_images(gray_image[0], pred_image[0])
-                #    summary_image = concat_images(summary_image, color_image[0])
-                #    plt.imsave("summary/result/" + str(step) + "_0", summary_image)
-                    train_writer.add_summary(summary, step)
-                    train_writer.flush()
-
-            save_path = saver.save(sess, "summary/model.ckpt")
-            print "Training Finished! Model saved in file: %s" % save_path
-
-            # Predict
-            # TODO: Test with testing data
-            # print "Testing Accuracy: %f" % (sess.run(accuracy, feed_dict={x: 0, y: 0, is_training: False}))
-        except tf.errors.OUT_OF_RANGE as e:
-            # Handle exception
-            print "Done training -- epoch limit reached"
-            coord.request_stop(e)
-        finally:
-            # When done, ask the threads to stop.
-            coord.request_stop()
-
-        # TODO: remove those debug output
-        print "Y in %f - %f" % (min_y, max_y)
-        print "U in %f - %f" % (min_u, max_u)
-        print "V in %f - %f" % (min_v, max_v)
-
-    # Wait for threads to finish.
-    coord.join(threads)
-    sess.close()
