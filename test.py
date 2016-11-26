@@ -124,10 +124,17 @@ if __name__ == '__main__':
                     test_writer.flush()
 
                     # Save output image
-                    gray_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[batch_x, batch_x, batch_x])[0], gray=True)
+                    zero_x = tf.zeros(tf.shape(batch_x))
+                    u_slice = tf.slice(pred, [0, 0, 0, 0], [-1, -1, -1, 1])
+                    v_slice = tf.slice(pred, [0, 0, 0, 1], [-1, -1, -1, 1])
+                    gray_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[batch_x, zero_x, zero_x])[0])
                     pred_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[batch_x, pred])[0])
                     color_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[batch_x, batch_y])[0])
-                    summary_image = concat_images(gray_image, pred_image)
+                    u_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[zero_x, u_slice, zero_x])[0])
+                    v_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[zero_x, zero_x, v_slice])[0])
+                    summary_image = concat_images(gray_image, u_image)
+                    summary_image = concat_images(summary_image, v_image)
+                    summary_image = concat_images(summary_image, pred_image)
                     summary_image = concat_images(summary_image, color_image)
                     plt.imsave("summary/result/" + str(step) + "_0.jpg", sess.run(summary_image))
 

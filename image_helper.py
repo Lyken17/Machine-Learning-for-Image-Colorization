@@ -33,11 +33,10 @@ def rgb_to_yuv(rgb_image):
     return _yuv
 
 
-def yuv_to_rgb(yuv_image, gray=False):
+def yuv_to_rgb(yuv_image):
     """
     Convert image color space from YUV to RGB
     :param yuv_image: an image with YUV color space
-    :param gray: return gray image
     :return: an image with RGB color space
     """
     # Get width and height for image
@@ -55,12 +54,9 @@ def yuv_to_rgb(yuv_image, gray=False):
     _v = tf.mul(_v, v_norm_para)
 
     # Calculate r, g, b channel
-    if not gray:
-        _r = _y + 1.13983 * _v
-        _g = _y - 0.39464 * _u - 0.58060 * _v
-        _b = _y + 2.03211 * _u
-    else:
-        _r = _g = _b = _y
+    _r = _y + 1.13983 * _v
+    _g = _y - 0.39464 * _u - 0.58060 * _v
+    _b = _y + 2.03211 * _u
 
     # Get image with RGB color space
     _rgb = tf.concat(concat_dim=2, values=[_r, _g, _b])
