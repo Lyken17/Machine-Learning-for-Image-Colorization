@@ -2,8 +2,6 @@
 Helper functions for image manipulation
 """
 
-import tensorflow as tf
-
 from config import *
 
 
@@ -13,14 +11,10 @@ def rgb_to_yuv(rgb_image):
     :param rgb_image: an image with RGB color space
     :return: an image with YUV color space
     """
-    # Get width and height for image
-    _w = tf.shape(rgb_image)[0]
-    _h = tf.shape(rgb_image)[1]
-
     # Get r, g, b channel
-    _r = tf.slice(rgb_image, [0, 0, 0], [_w, _h, 1])
-    _g = tf.slice(rgb_image, [0, 0, 1], [_w, _h, 1])
-    _b = tf.slice(rgb_image, [0, 0, 2], [_w, _h, 1])
+    _r = tf.slice(rgb_image, [0, 0, 0], [-1, -1, 1])
+    _g = tf.slice(rgb_image, [0, 0, 1], [-1, -1, 1])
+    _b = tf.slice(rgb_image, [0, 0, 2], [-1, -1, 1])
 
     # Calculate y, u, v channel
     _y = (0.299 * _r) + (0.587 * _g) + (0.114 * _b)
@@ -39,14 +33,10 @@ def yuv_to_rgb(yuv_image):
     :param yuv_image: an image with YUV color space
     :return: an image with RGB color space
     """
-    # Get width and height for image
-    _w = tf.shape(yuv_image)[0]
-    _h = tf.shape(yuv_image)[1]
-
     # Get y, u, v channel
-    _y = tf.slice(yuv_image, [0, 0, 0], [_w, _h, 1])
-    _u = tf.slice(yuv_image, [0, 0, 1], [_w, _h, 1])
-    _v = tf.slice(yuv_image, [0, 0, 2], [_w, _h, 1])
+    _y = tf.slice(yuv_image, [0, 0, 0], [-1, -1, 1])
+    _u = tf.slice(yuv_image, [0, 0, 1], [-1, -1, 1])
+    _v = tf.slice(yuv_image, [0, 0, 2], [-1, -1, 1])
 
     # Denormalize y, u, v channels
     _y = tf.add(tf.div(_y, 2.0), y_norm_para)

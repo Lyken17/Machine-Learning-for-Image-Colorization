@@ -33,15 +33,32 @@ class ResidualEncoder(object):
         """
         diff = tf.sub(predict_val, real_val, name="diff")
         square = tf.square(diff, name="square")
-        return tf.div(tf.reduce_mean(square, name="cost"), batch_size, name="cost_per_batch")
+        return tf.reduce_mean(square, name="cost")
 
     @staticmethod
-    def batch_normal(input_data, training_flag, scope):
-        return tf.cond(training_flag,
-                       lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
-                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope),
-                       lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
-                                          activation_fn=tf.nn.relu, updates_collections=None, scope=scope, reuse=True), name='batch_normalization')
+    def batch_normal(input_data, training_flag, scope, relu):
+        """
+        Doing batch normalization
+        :param input_data: the input data
+        :param training_flag: the flag indicate if it is training
+        :param scope: scope
+        :param relu: relu flag
+        :return: normalized data
+        """
+        if relu:
+            return tf.cond(training_flag,
+                           lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
+                                              activation_fn=tf.nn.relu, updates_collections=None, scope=scope),
+                           lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
+                                              activation_fn=tf.nn.relu, updates_collections=None, scope=scope, reuse=True),
+                           name='batch_normalization_with_relu')
+        else:
+            return tf.cond(training_flag,
+                           lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
+                                              updates_collections=None, scope=scope),
+                           lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
+                                              updates_collections=None, scope=scope, reuse=True),
+                           name='batch_normalization_without_relu')
 
     @staticmethod
     def max_pool(layer_input, name):
@@ -53,18 +70,19 @@ class ResidualEncoder(object):
         """
         return tf.nn.max_pool(layer_input, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
 
-    def conv_layer(self, layer_input, name, is_training):
+    def conv_layer(self, layer_input, name, is_training, relu=True):
         """
         Convolution layer
         :param layer_input: the input data for this layer
         :param name: name for this layer
         :param is_training: a flag indicate if now is in training
+        :param relu: relu flag
         :return: the layer data after convolution
         """
         with tf.variable_scope(name):
             weight = self.get_weight(name)
             output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME')
-            output = self.batch_normal(output, training_flag=is_training, scope=name)
+            output = self.batch_normal(output, training_flag=is_training, scope=name, relu=relu)
             return output
 
     def build(self, input_data, is_training):
@@ -178,7 +196,7 @@ class ResidualEncoder(object):
             assert b_conv1.get_shape().as_list()[1:] == [224, 224, 3]
 
         # Output layer
-        b_conv0 = self.conv_layer(tf.add(input_data, b_conv1), "b_conv0", is_training)
+        b_conv0 = self.conv_layer(tf.add(input_data, b_conv1), "b_conv0", is_training, relu=False)
 
         if debug:
             assert b_conv0.get_shape().as_list()[1:] == [224, 224, 3]

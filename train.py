@@ -114,10 +114,12 @@ if __name__ == '__main__':
                     train_writer.add_summary(summary, step)
                     train_writer.flush()
 
-            # Avoid graph too big problem
-            if not debug:
-                save_path = saver.save(sess, "summary/model.ckpt")
-            print "Training Finished! Model saved in file: %s" % save_path
+                # Avoid graph too big problem
+                if not debug and step % save_step == 0 and step != 0:
+                    save_path = saver.save(sess, "summary/model.ckpt")
+                    print "Model saved in file: %s" % save_path
+
+            print "Training Finished!"
 
         except tf.errors.OUT_OF_RANGE as e:
             # Handle exception

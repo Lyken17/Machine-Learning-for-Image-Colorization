@@ -18,12 +18,13 @@ eps = float_info.epsilon
 image_size = 224
 
 # Parameters for neural network
-learning_rate = 0.1
+learning_rate = 0.001
 training_iters = 1000
-batch_size = 6
-dequeue_buffer_size = 1000
+batch_size = 64
+dequeue_buffer_size = 500
 display_step = 1
-test_iters = 10
+save_step = 50
+test_iters = 100
 
 # Image resize method
 input_resize_method = ResizeMethod.BILINEAR

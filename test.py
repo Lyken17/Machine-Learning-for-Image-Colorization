@@ -95,6 +95,8 @@ if __name__ == '__main__':
             max_y, min_y = 0, 0
             max_u, min_u = 0, 0
             max_v, min_v = 0, 0
+            pred_max_u, pred_min_u = 0, 0
+            pred_max_v, pred_min_v = 0, 0
 
         try:
             step = 0
@@ -138,6 +140,14 @@ if __name__ == '__main__':
                     summary_image = concat_images(summary_image, color_image)
                     plt.imsave("summary/result/" + str(step) + "_0.jpg", sess.run(summary_image))
 
+                    if debug:
+                        _uu = tf.slice(pred, [0, 0, 0, 0], [-1, -1, -1, 1])
+                        _vv = tf.slice(pred, [0, 0, 0, 1], [-1, -1, -1, 1])
+                        pred_max_u = np.maximum(sess.run(tf.reduce_max(_uu)), pred_max_u)
+                        pred_min_u = np.minimum(sess.run(tf.reduce_min(_uu)), pred_min_u)
+                        pred_max_v = np.maximum(sess.run(tf.reduce_max(_vv)), pred_max_v)
+                        pred_min_v = np.minimum(sess.run(tf.reduce_min(_vv)), pred_min_v)
+
         except tf.errors.OUT_OF_RANGE as e:
             # Handle exception
             print "Done training -- epoch limit reached"
@@ -151,6 +161,8 @@ if __name__ == '__main__':
             print "Y in %f - %f" % (min_y, max_y)
             print "U in %f - %f" % (min_u, max_u)
             print "V in %f - %f" % (min_v, max_v)
+            print "U in %f - %f" % (pred_min_u, pred_max_u)
+            print "V in %f - %f" % (pred_min_v, pred_max_v)
 
     # Wait for threads to finish.
     coord.join(threads)
