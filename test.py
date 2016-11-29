@@ -46,14 +46,12 @@ if __name__ == '__main__':
     tf.histogram_summary("conv4_1", weights["conv4_1"])
     tf.histogram_summary("conv4_2", weights["conv4_2"])
     tf.histogram_summary("conv4_3", weights["conv4_3"])
-    tf.histogram_summary("conv5_1", weights["conv5_1"])
-    tf.histogram_summary("conv5_2", weights["conv5_2"])
-    tf.histogram_summary("conv5_3", weights["conv5_3"])
     tf.histogram_summary("b_conv4", weights["b_conv4"])
     tf.histogram_summary("b_conv3", weights["b_conv3"])
     tf.histogram_summary("b_conv2", weights["b_conv2"])
     tf.histogram_summary("b_conv1", weights["b_conv1"])
     tf.histogram_summary("b_conv0", weights["b_conv0"])
+    tf.histogram_summary("output_conv", weights["output_conv"])
     tf.histogram_summary("cost", cost)
 
     # Saver
@@ -92,11 +90,11 @@ if __name__ == '__main__':
         print "Start testing!!!"
 
         if debug:
-            max_y, min_y = 0, 0
-            max_u, min_u = 0, 0
-            max_v, min_v = 0, 0
-            pred_max_u, pred_min_u = 0, 0
-            pred_max_v, pred_min_v = 0, 0
+            max_y, min_y = -1, 1
+            max_u, min_u = -1, 1
+            max_v, min_v = -1, 1
+            pred_max_u, pred_min_u = -1, 1
+            pred_max_v, pred_min_v = -1, 1
 
         try:
             step = 0

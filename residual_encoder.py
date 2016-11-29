@@ -55,9 +55,9 @@ class ResidualEncoder(object):
         else:
             return tf.cond(training_flag,
                            lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
-                                              updates_collections=None, scope=scope),
+                                              activation_fn=tf.tanh, updates_collections=None, scope=scope),
                            lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
-                                              updates_collections=None, scope=scope, reuse=True),
+                                              activation_fn=tf.tanh, updates_collections=None, scope=scope, reuse=True),
                            name='batch_normalization_without_relu')
 
     @staticmethod
@@ -137,35 +137,19 @@ class ResidualEncoder(object):
         conv4_1 = self.conv_layer(pool3, "conv4_1", is_training)
         conv4_2 = self.conv_layer(conv4_1, "conv4_2", is_training)
         conv4_3 = self.conv_layer(conv4_2, "conv4_3", is_training)
-        pool4 = self.max_pool(conv4_3, 'pool4')
 
         if debug:
             assert conv4_1.get_shape().as_list()[1:] == [28, 28, 512]
             assert conv4_2.get_shape().as_list()[1:] == [28, 28, 512]
             assert conv4_3.get_shape().as_list()[1:] == [28, 28, 512]
-            assert pool4.get_shape().as_list()[1:] == [14, 14, 512]
 
-        # Fifth convolutional layer
-        conv5_1 = self.conv_layer(pool4, "conv5_1", is_training)
-        conv5_2 = self.conv_layer(conv5_1, "conv5_2", is_training)
-        conv5_3 = self.conv_layer(conv5_2, "conv5_3", is_training)
+        # 1x1 conv with batch norm
+        b_conv4 = self.conv_layer(conv4_3, "b_conv4", is_training)
 
         if debug:
-            assert conv5_1.get_shape().as_list()[1:] == [14, 14, 512]
-            assert conv5_2.get_shape().as_list()[1:] == [14, 14, 512]
-            assert conv5_3.get_shape().as_list()[1:] == [14, 14, 512]
-
-        # Backward upscale layer 5 and convolutional layers 4
-        b_conv5_upscale = tf.image.resize_images(conv5_3, [28, 28], method=training_resize_method)
-        b_conv4_input = tf.add(conv4_3, b_conv5_upscale, name="b_conv4_input")
-        b_conv4 = self.conv_layer(b_conv4_input, "b_conv4", is_training)
-
-        if debug:
-            assert b_conv5_upscale.get_shape().as_list()[1:] == [28, 28, 512]
-            assert b_conv4_input.get_shape().as_list()[1:] == [28, 28, 512]
             assert b_conv4.get_shape().as_list()[1:] == [28, 28, 256]
 
-        # Backward upscale layer 4 and convolutional layers 3
+        # Backward upscale layer 4 and add convolutional layers 3
         b_conv4_upscale = tf.image.resize_images(b_conv4, [56, 56], method=training_resize_method)
         b_conv3_input = tf.add(conv3_3, b_conv4_upscale, name="b_conv3_input")
         b_conv3 = self.conv_layer(b_conv3_input, "b_conv3", is_training)
@@ -175,7 +159,7 @@ class ResidualEncoder(object):
             assert b_conv3_input.get_shape().as_list()[1:] == [56, 56, 256]
             assert b_conv3.get_shape().as_list()[1:] == [56, 56, 128]
 
-        # Backward upscale layer 3 and convolutional layers 2
+        # Backward upscale layer 3 and add convolutional layers 2
         b_conv3_upscale = tf.image.resize_images(b_conv3, [112, 112], method=training_resize_method)
         b_conv2_input = tf.add(conv2_2, b_conv3_upscale, name="b_conv2_input")
         b_conv2 = self.conv_layer(b_conv2_input, "b_conv2", is_training)
@@ -185,7 +169,7 @@ class ResidualEncoder(object):
             assert b_conv2_input.get_shape().as_list()[1:] == [112, 112, 128]
             assert b_conv2.get_shape().as_list()[1:] == [112, 112, 64]
 
-        # Backward upscale layer 2 and convolutional layers 1
+        # Backward upscale layer 2 and add convolutional layers 1
         b_conv2_upscale = tf.image.resize_images(b_conv2, [224, 224], method=training_resize_method)
         b_conv1_input = tf.add(conv1_2, b_conv2_upscale, name="b_conv1_input")
         b_conv1 = self.conv_layer(b_conv1_input, "b_conv1", is_training)
@@ -195,12 +179,20 @@ class ResidualEncoder(object):
             assert b_conv1_input.get_shape().as_list()[1:] == [224, 224, 64]
             assert b_conv1.get_shape().as_list()[1:] == [224, 224, 3]
 
-        # Output layer
-        b_conv0 = self.conv_layer(tf.add(input_data, b_conv1), "b_conv0", is_training, relu=False)
+        # Backward upscale layer 1 and add input layers
+        b_conv1_upscale = tf.image.resize_images(b_conv1, [224, 224], method=training_resize_method)
+        b_conv0_input = tf.add(input_data, b_conv1_upscale, name="b_conv0_input")
+        b_conv0 = self.conv_layer(b_conv0_input, "b_conv0", is_training)
 
         if debug:
+            assert b_conv1_upscale.get_shape().as_list()[1:] == [224, 224, 3]
+            assert b_conv0_input.get_shape().as_list()[1:] == [224, 224, 3]
             assert b_conv0.get_shape().as_list()[1:] == [224, 224, 3]
 
-        output_layer = tf.tanh(tf.slice(b_conv0, [0, 0, 0, 1], [-1, -1, -1, 2]), name='output_layer')
+        # Output layer
+        output_layer = self.conv_layer(b_conv0, "output_conv", is_training, relu=False)
+
+        if debug:
+            assert output_layer.get_shape().as_list()[1:] == [224, 224, 2]
 
         return output_layer

@@ -18,7 +18,7 @@ eps = float_info.epsilon
 image_size = 224
 
 # Parameters for neural network
-learning_rate = 0.01
+learning_rate = 0.03
 training_iters = 1000
 batch_size = 30
 dequeue_buffer_size = 1000
@@ -51,12 +51,10 @@ weights = {
     'conv4_1': tf.Variable(tf.random_normal([3, 3, 256, 512])),
     'conv4_2': tf.Variable(tf.random_normal([3, 3, 512, 512])),
     'conv4_3': tf.Variable(tf.random_normal([3, 3, 512, 512])),
-    'conv5_1': tf.Variable(tf.random_normal([3, 3, 512, 512])),
-    'conv5_2': tf.Variable(tf.random_normal([3, 3, 512, 512])),
-    'conv5_3': tf.Variable(tf.random_normal([3, 3, 512, 512])),
-    'b_conv4': tf.Variable(tf.random_normal([3, 3, 512, 256])),
+    'b_conv4': tf.Variable(tf.random_normal([1, 1, 512, 256])),
     'b_conv3': tf.Variable(tf.random_normal([3, 3, 256, 128])),
     'b_conv2': tf.Variable(tf.random_normal([3, 3, 128, 64])),
     'b_conv1': tf.Variable(tf.random_normal([3, 3, 64, 3])),
     'b_conv0': tf.Variable(tf.random_normal([3, 3, 3, 3])),
+    'output_conv': tf.Variable(tf.random_normal([3, 3, 3, 2])),
 }
