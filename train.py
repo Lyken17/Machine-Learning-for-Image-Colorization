@@ -80,29 +80,12 @@ if __name__ == '__main__':
         # Start training
         print "Start training!!!"
 
-        if debug:
-            max_y, min_y = 0, 0
-            max_u, min_u = 0, 0
-            max_v, min_v = 0, 0
-
         try:
             while not coord.should_stop():
                 step = sess.run(global_step)
-                if step == training_iters:
-                    break
 
                 # Get batch of data
                 batch_x, batch_y = sess.run([batch_xs, batch_ys])
-
-                if debug:
-                    _uu = tf.slice(batch_y, [0, 0, 0, 0], [-1, -1, -1, 1])
-                    _vv = tf.slice(batch_y, [0, 0, 0, 1], [-1, -1, -1, 1])
-                    max_y = np.maximum(sess.run(tf.reduce_max(batch_x)), max_y)
-                    min_y = np.minimum(sess.run(tf.reduce_min(batch_x)), min_y)
-                    max_u = np.maximum(sess.run(tf.reduce_max(_uu)), max_u)
-                    min_u = np.minimum(sess.run(tf.reduce_min(_uu)), min_u)
-                    max_v = np.maximum(sess.run(tf.reduce_max(_vv)), max_v)
-                    min_v = np.minimum(sess.run(tf.reduce_min(_vv)), min_v)
 
                 # Run optimizer
                 sess.run(optimizer, feed_dict={x: batch_x, y: batch_y, is_training: True})
@@ -114,10 +97,14 @@ if __name__ == '__main__':
                     train_writer.add_summary(summary, step)
                     train_writer.flush()
 
-                # Avoid graph too big problem
-                if not debug and step % save_step == 0 and step != 0:
+                # Save model
+                if step % save_step == 0 and step != 0:
                     save_path = saver.save(sess, "summary/model.ckpt")
                     print "Model saved in file: %s" % save_path
+
+                # Stop training
+                if step == training_iters:
+                    break
 
             print "Training Finished!"
 
@@ -129,11 +116,6 @@ if __name__ == '__main__':
         finally:
             # When done, ask the threads to stop.
             coord.request_stop()
-
-        if debug:
-            print "Y in %f - %f" % (min_y, max_y)
-            print "U in %f - %f" % (min_u, max_u)
-            print "V in %f - %f" % (min_v, max_v)
 
     # Wait for threads to finish.
     coord.join(threads)

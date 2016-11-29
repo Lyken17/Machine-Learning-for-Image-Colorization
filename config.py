@@ -18,10 +18,10 @@ eps = float_info.epsilon
 image_size = 224
 
 # Parameters for neural network
-learning_rate = 0.001
+learning_rate = 0.01
 training_iters = 1000
-batch_size = 64
-dequeue_buffer_size = 500
+batch_size = 30
+dequeue_buffer_size = 1000
 display_step = 1
 save_step = 50
 test_iters = 100

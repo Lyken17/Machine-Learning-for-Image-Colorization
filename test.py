@@ -130,10 +130,10 @@ if __name__ == '__main__':
                     u_slice = tf.slice(pred, [0, 0, 0, 0], [-1, -1, -1, 1])
                     v_slice = tf.slice(pred, [0, 0, 0, 1], [-1, -1, -1, 1])
                     gray_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[batch_x, zero_x, zero_x])[0])
-                    pred_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[batch_x, pred])[0])
-                    color_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[batch_x, batch_y])[0])
                     u_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[zero_x, u_slice, zero_x])[0])
                     v_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[zero_x, zero_x, v_slice])[0])
+                    pred_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[batch_x, pred])[0])
+                    color_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[batch_x, batch_y])[0])
                     summary_image = concat_images(gray_image, u_image)
                     summary_image = concat_images(summary_image, v_image)
                     summary_image = concat_images(summary_image, pred_image)
@@ -141,12 +141,10 @@ if __name__ == '__main__':
                     plt.imsave("summary/result/" + str(step) + "_0.jpg", sess.run(summary_image))
 
                     if debug:
-                        _uu = tf.slice(pred, [0, 0, 0, 0], [-1, -1, -1, 1])
-                        _vv = tf.slice(pred, [0, 0, 0, 1], [-1, -1, -1, 1])
-                        pred_max_u = np.maximum(sess.run(tf.reduce_max(_uu)), pred_max_u)
-                        pred_min_u = np.minimum(sess.run(tf.reduce_min(_uu)), pred_min_u)
-                        pred_max_v = np.maximum(sess.run(tf.reduce_max(_vv)), pred_max_v)
-                        pred_min_v = np.minimum(sess.run(tf.reduce_min(_vv)), pred_min_v)
+                        pred_max_u = np.maximum(sess.run(tf.reduce_max(u_slice)), pred_max_u)
+                        pred_min_u = np.minimum(sess.run(tf.reduce_min(u_slice)), pred_min_u)
+                        pred_max_v = np.maximum(sess.run(tf.reduce_max(v_slice)), pred_max_v)
+                        pred_min_v = np.minimum(sess.run(tf.reduce_min(v_slice)), pred_min_v)
 
         except tf.errors.OUT_OF_RANGE as e:
             # Handle exception
@@ -161,8 +159,8 @@ if __name__ == '__main__':
             print "Y in %f - %f" % (min_y, max_y)
             print "U in %f - %f" % (min_u, max_u)
             print "V in %f - %f" % (min_v, max_v)
-            print "U in %f - %f" % (pred_min_u, pred_max_u)
-            print "V in %f - %f" % (pred_min_v, pred_max_v)
+            print "Pred_U in %f - %f" % (pred_min_u, pred_max_u)
+            print "Pred_V in %f - %f" % (pred_min_v, pred_max_v)
 
     # Wait for threads to finish.
     coord.join(threads)

@@ -4,6 +4,8 @@ Helper functions for read input
 
 import os
 
+import cv2
+
 from config import *
 from image_helper import rgb_to_yuv
 
@@ -20,7 +22,10 @@ def init_file_path(directory):
         if not file_name.endswith('.jpg'):
             continue
         file_path = '%s/%s' % (directory, file_name)
-        paths.append(file_path)
+        img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
+        # Throw gray space images
+        if len(img.shape) == 3 and img.shape[2] != 1:
+            paths.append(file_path)
     return paths
 
 
