@@ -34,22 +34,6 @@ if __name__ == '__main__':
 
     # Summaries
     print "Init summaries"
-    tf.histogram_summary("conv1_1", weights["conv1_1"])
-    tf.histogram_summary("conv1_2", weights["conv1_2"])
-    tf.histogram_summary("conv2_1", weights["conv2_1"])
-    tf.histogram_summary("conv2_2", weights["conv2_2"])
-    tf.histogram_summary("conv3_1", weights["conv3_1"])
-    tf.histogram_summary("conv3_2", weights["conv3_2"])
-    tf.histogram_summary("conv3_3", weights["conv3_3"])
-    tf.histogram_summary("conv4_1", weights["conv4_1"])
-    tf.histogram_summary("conv4_2", weights["conv4_2"])
-    tf.histogram_summary("conv4_3", weights["conv4_3"])
-    tf.histogram_summary("b_conv4", weights["b_conv4"])
-    tf.histogram_summary("b_conv3", weights["b_conv3"])
-    tf.histogram_summary("b_conv2", weights["b_conv2"])
-    tf.histogram_summary("b_conv1", weights["b_conv1"])
-    tf.histogram_summary("b_conv0", weights["b_conv0"])
-    tf.histogram_summary("output_conv", weights["output_conv"])
     tf.histogram_summary("cost", cost)
 
     # Saver

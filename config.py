@@ -58,3 +58,23 @@ weights = {
     'b_conv0': tf.Variable(tf.random_normal([3, 3, 3, 3])),
     'output_conv': tf.Variable(tf.random_normal([3, 3, 3, 2])),
 }
+
+# Biases for each layer
+biases = {
+    'conv1_1': tf.Variable(tf.random_normal([64])),
+    'conv1_2': tf.Variable(tf.random_normal([64])),
+    'conv2_1': tf.Variable(tf.random_normal([128])),
+    'conv2_2': tf.Variable(tf.random_normal([128])),
+    'conv3_1': tf.Variable(tf.random_normal([256])),
+    'conv3_2': tf.Variable(tf.random_normal([256])),
+    'conv3_3': tf.Variable(tf.random_normal([256])),
+    'conv4_1': tf.Variable(tf.random_normal([512])),
+    'conv4_2': tf.Variable(tf.random_normal([512])),
+    'conv4_3': tf.Variable(tf.random_normal([512])),
+    'b_conv4': tf.Variable(tf.random_normal([256])),
+    'b_conv3': tf.Variable(tf.random_normal([128])),
+    'b_conv2': tf.Variable(tf.random_normal([64])),
+    'b_conv1': tf.Variable(tf.random_normal([3])),
+    'b_conv0': tf.Variable(tf.random_normal([3])),
+    'output_conv': tf.Variable(tf.random_normal([2])),
+}

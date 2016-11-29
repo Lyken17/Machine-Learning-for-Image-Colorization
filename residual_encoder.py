@@ -24,6 +24,15 @@ class ResidualEncoder(object):
         return weights[name]
 
     @staticmethod
+    def get_bias(name):
+        """
+        Get bias for one layer
+        :param name: the name of the layer
+        :return: the initial bias for this layer
+        """
+        return biases[name]
+
+    @staticmethod
     def get_cost(predict_val, real_val):
         """
         Cost function
@@ -81,8 +90,10 @@ class ResidualEncoder(object):
         """
         with tf.variable_scope(name):
             weight = self.get_weight(name)
-            output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME')
-            output = self.batch_normal(output, training_flag=is_training, scope=name, relu=relu)
+            bias = self.get_bias(name)
+            output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME', name="conv")
+            output = tf.add(output, bias, name="bias")
+            # output = self.batch_normal(output, training_flag=is_training, scope=name, relu=relu)
             return output
 
     def build(self, input_data, is_training):
