@@ -7,7 +7,6 @@ import os
 import cv2
 
 from config import *
-from image_helper import rgb_to_yuv
 
 
 def init_file_path(directory):
@@ -22,18 +21,21 @@ def init_file_path(directory):
         if not file_name.endswith('.jpg'):
             continue
         file_path = '%s/%s' % (directory, file_name)
-        img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
-        # Throw gray space images
-        if len(img.shape) == 3 and img.shape[2] != 1:
+        if debug:
             paths.append(file_path)
+        else:
+            img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
+            # Throw gray space images
+            if len(img.shape) == 3 and img.shape[2] != 1:
+                paths.append(file_path)
     return paths
 
 
 def read_image(filename_queue):
     """
-    Read and store image with YUV color space
+    Read and store image with RGB color space
     :param filename_queue: the filename queue for image files
-    :return: image with YUV color space
+    :return: image with RGB color space
     """
     # Read the image with RGB color space
     reader = tf.WholeFileReader()
@@ -43,9 +45,7 @@ def read_image(filename_queue):
     rgb_image = tf.image.convert_image_dtype(rgb_image, tf.float32, name="float_image")
     # Resize image to the right image_size
     rgb_image = tf.image.resize_images(rgb_image, [image_size, image_size], method=input_resize_method)
-    # Change color space to YUV
-    yuv_image = rgb_to_yuv(rgb_image)
-    return yuv_image
+    return rgb_image
 
 
 def input_pipeline(filenames, b_size, num_epochs=None, shuffle=True):
@@ -67,25 +67,3 @@ def input_pipeline(filenames, b_size, num_epochs=None, shuffle=True):
                                          shapes=[image_size, image_size, 3],
                                          min_after_dequeue=min_after_dequeue)
     return image_batch
-
-
-def get_y_and_uv_data(filenames, b_size):
-    """
-    Get the input data with Y channel and target data with UV channels
-    :param filenames: the path for the image file
-    :param b_size: batch size
-    :return: input data with Y channel and target data with UV channels
-    """
-    # Get the image with YUV channels
-    _yuv = input_pipeline(filenames, b_size)
-    # Split channels
-    channel_y = tf.slice(_yuv, [0, 0, 0, 0], [-1, -1, -1, 1])
-    channel_u = tf.slice(_yuv, [0, 0, 0, 1], [-1, -1, -1, 1])
-    channel_v = tf.slice(_yuv, [0, 0, 0, 2], [-1, -1, -1, 1])
-    # Normalize channels
-    channel_y = tf.mul(tf.sub(channel_y, y_norm_para), 2.0, name="channel_y")
-    channel_u = tf.div(channel_u, u_norm_para, name="channel_u")
-    channel_v = tf.div(channel_v, v_norm_para, name="channel_v")
-    # Add channel data
-    channel_uv = tf.concat(concat_dim=3, values=[channel_u, channel_v], name="channel_uv")
-    return channel_y, channel_uv
