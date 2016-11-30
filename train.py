@@ -2,6 +2,8 @@
 Training model
 """
 
+import numpy as np
+
 from config import *
 from image_helper import (rgb_to_yuv, yuv_to_rgb)
 from read_input import (init_file_path, input_pipeline)
@@ -57,7 +59,7 @@ if __name__ == '__main__':
     tf.histogram_summary("b_conv2", weights["b_conv2"])
     tf.histogram_summary("b_conv1", weights["b_conv1"])
     tf.histogram_summary("b_conv0", weights["b_conv0"])
-    tf.histogram_summary("cost", cost)
+    tf.histogram_summary("cost", tf.reduce_mean(cost))
     tf.image_summary("color_image_rgb", color_image_rgb, max_images=1)
     tf.image_summary("predict_rgb", predict_rgb, max_images=1)
     tf.image_summary("gray_image", gray_image_rgb, max_images=1)
@@ -98,7 +100,7 @@ if __name__ == '__main__':
                 # Print batch loss
                 if step % display_step == 0:
                     loss, summary = sess.run([cost, merged], feed_dict={is_training: True})
-                    print "Iter %d, Minibatch Loss = %f" % (step, loss)
+                    print "Iter %d, Minibatch Loss = %f" % (step, np.mean(loss))
                     train_writer.add_summary(summary, step)
                     train_writer.flush()
 

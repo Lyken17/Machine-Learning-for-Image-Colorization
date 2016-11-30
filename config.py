@@ -18,7 +18,7 @@ eps = float_info.epsilon
 image_size = 224
 
 # Parameters for neural network
-learning_rate = 0.001
+learning_rate = 0.0000001
 training_iters = 1000
 batch_size = 30
 dequeue_buffer_size = 1000
@@ -41,20 +41,20 @@ test_dir = "val2014"
 
 # Weights for each layer
 weights = {
-    'b_conv4': tf.Variable(tf.random_normal([1, 1, 512, 256])),
-    'b_conv3': tf.Variable(tf.random_normal([3, 3, 256, 128])),
-    'b_conv2': tf.Variable(tf.random_normal([3, 3, 128, 64])),
-    'b_conv1': tf.Variable(tf.random_normal([3, 3, 64, 3])),
-    'b_conv0': tf.Variable(tf.random_normal([3, 3, 3, 3])),
-    'output_conv': tf.Variable(tf.random_normal([3, 3, 3, 2])),
+    'b_conv4': tf.Variable(tf.random_normal([1, 1, 512, 256], stddev=0.01)),
+    'b_conv3': tf.Variable(tf.random_normal([3, 3, 256, 128], stddev=0.01)),
+    'b_conv2': tf.Variable(tf.random_normal([3, 3, 128, 64], stddev=0.01)),
+    'b_conv1': tf.Variable(tf.random_normal([3, 3, 64, 3], stddev=0.01)),
+    'b_conv0': tf.Variable(tf.random_normal([3, 3, 3, 3], stddev=0.01)),
+    'output_conv': tf.Variable(tf.random_normal([3, 3, 3, 2], stddev=0.01)),
 }
 
 # Biases for each layer
 biases = {
-    'b_conv4': tf.Variable(tf.random_normal([256])),
-    'b_conv3': tf.Variable(tf.random_normal([128])),
-    'b_conv2': tf.Variable(tf.random_normal([64])),
-    'b_conv1': tf.Variable(tf.random_normal([3])),
-    'b_conv0': tf.Variable(tf.random_normal([3])),
-    'output_conv': tf.Variable(tf.random_normal([2])),
+    'b_conv4': tf.Variable(tf.random_normal([256], stddev=0.01)),
+    'b_conv3': tf.Variable(tf.random_normal([128], stddev=0.01)),
+    'b_conv2': tf.Variable(tf.random_normal([64], stddev=0.01)),
+    'b_conv1': tf.Variable(tf.random_normal([3], stddev=0.01)),
+    'b_conv0': tf.Variable(tf.random_normal([3], stddev=0.01)),
+    'output_conv': tf.Variable(tf.random_normal([2], stddev=0.01)),
 }

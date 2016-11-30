@@ -59,7 +59,7 @@ if __name__ == '__main__':
     tf.histogram_summary("b_conv2", weights["b_conv2"])
     tf.histogram_summary("b_conv1", weights["b_conv1"])
     tf.histogram_summary("b_conv0", weights["b_conv0"])
-    tf.histogram_summary("cost", cost)
+    tf.histogram_summary("cost", tf.reduce_mean(cost))
     tf.image_summary("color_image_rgb", color_image_rgb, max_images=1)
     tf.image_summary("predict_rgb", predict_rgb, max_images=1)
     tf.image_summary("gray_image", gray_image_rgb, max_images=1)
@@ -116,7 +116,7 @@ if __name__ == '__main__':
                     loss, pred, pred_rgb, color_rgb, gray_rgb, gray, color_yuv, summary = \
                         sess.run([cost, predict, predict_rgb, color_image_rgb, gray_image_rgb, gray_image_input,
                                   color_image_yuv, merged], feed_dict={is_training: False})
-                    print "Iter %d, Minibatch Loss = %f" % (step, loss)
+                    print "Iter %d, Minibatch Loss = %f" % (step, np.mean(loss))
                     test_writer.add_summary(summary, step)
                     test_writer.flush()
 

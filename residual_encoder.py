@@ -40,9 +40,13 @@ class ResidualEncoder(object):
         :param real_val: the real value
         :return: cost
         """
+        if debug:
+            assert predict_val.get_shape().as_list()[1:] == [224, 224, 2]
+            assert real_val.get_shape().as_list()[1:] == [224, 224, 2]
+
         diff = tf.sub(predict_val, real_val, name="diff")
         square = tf.square(diff, name="square")
-        return tf.reduce_mean(square, name="cost")
+        return square
 
     @staticmethod
     def batch_normal(input_data, scope, training_flag):
