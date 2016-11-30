@@ -93,6 +93,10 @@ class ResidualEncoder(object):
             bias = self.get_bias(name)
             output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME', name="conv")
             output = tf.add(output, bias, name="bias")
+            if relu:
+                output = tf.nn.relu(output, name="relu")
+            else:
+                output = tf.tanh(output, name="tanh")
             # output = self.batch_normal(output, training_flag=is_training, scope=name, relu=relu)
             return output
 
