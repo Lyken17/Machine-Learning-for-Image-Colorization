@@ -1,10 +1,9 @@
-# Ligeng Experiment
+# Image Colorization
 
-## Download model
-
-1. `wget http://45.76.1.25:8000/colornet.t7` or
-2. https://drive.google.com/drive/folders/0B3lu5NBSC7pVUjQyd3ZJZnRDR28?usp=sharing
-
-## Run
-
-`th colorize.lua --input example.png`
+![poster](https://cloud.githubusercontent.com/assets/4648756/20785778/d3995ec0-b756-11e6-8cfe-e4ac85bedf11.jpg)
+  
+## For Colorizing Images
+Please refer to the sub-directory corresponding to the specific approach you want to utilize.
+  
+## For Pre-trained Models  
+Please download them in [RELEASE](https://github.com/Lyken17/Image-Colorization/releases)
