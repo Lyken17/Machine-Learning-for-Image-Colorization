@@ -144,7 +144,7 @@ if __name__ == '__main__':
                     summary_image = concat_images(summary_image, uu_image[0])
                     summary_image = concat_images(summary_image, vv_image[0])
                     summary_image = concat_images(summary_image, color_rgb[0])
-                    plt.imsave("summary/result/" + str(step) + "_0.jpg", sess.run(summary_image, feed_dict={is_training: False}))
+                    plt.imsave("summary/result/" + str(step) + "_0.jpg", sess.run(summary_image))
 
                     pred_max_u = np.maximum(sess.run(tf.reduce_max(pred_u)), pred_max_u)
                     pred_min_u = np.minimum(sess.run(tf.reduce_min(pred_u)), pred_min_u)

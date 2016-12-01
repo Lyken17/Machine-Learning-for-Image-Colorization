@@ -58,9 +58,9 @@ class ResidualEncoder(object):
         :return: normalized data
         """
         return tf.cond(training_flag,
-                       lambda: batch_norm(input_data, decay=0.9, is_training=True, center=True, scale=True,
+                       lambda: batch_norm(input_data, decay=0.9999, is_training=True, center=True, scale=True,
                                           updates_collections=None, scope=scope),
-                       lambda: batch_norm(input_data, decay=0.9, is_training=False, center=True, scale=True,
+                       lambda: batch_norm(input_data, decay=0.9999, is_training=False, center=True, scale=True,
                                           updates_collections=None, scope=scope, reuse=True),
                        name='batch_normalization')
 
@@ -151,13 +151,11 @@ class ResidualEncoder(object):
             assert b_conv1.get_shape().as_list()[1:] == [224, 224, 3]
 
         # Backward upscale layer 1 and add input layer
-        b_conv1_upscale = tf.image.resize_images(b_conv1, [224, 224], method=training_resize_method)
         bn_0 = self.batch_normal(input_data, "b_conv0", is_training)
-        b_conv0_input = tf.add(bn_0, b_conv1_upscale, name="b_conv0_input")
+        b_conv0_input = tf.add(bn_0, b_conv1, name="b_conv0_input")
         b_conv0 = self.conv_layer(b_conv0_input, "b_conv0", is_training)
 
         if debug:
-            assert b_conv1_upscale.get_shape().as_list()[1:] == [224, 224, 3]
             assert bn_0.get_shape().as_list()[1:] == [224, 224, 3]
             assert b_conv0_input.get_shape().as_list()[1:] == [224, 224, 3]
             assert b_conv0.get_shape().as_list()[1:] == [224, 224, 3]

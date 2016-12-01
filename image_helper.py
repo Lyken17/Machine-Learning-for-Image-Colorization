@@ -24,8 +24,9 @@ def rgb_to_yuv(rgb_image):
     # Get image with YUV color space
     _yuv = tf.concat(concat_dim=3, values=[_y, _u, _v])
 
-    # Normalize y, u, v channels
-    _yuv = normalized_yuv(_yuv)
+    if normalize_yuv:
+        # Normalize y, u, v channels
+        _yuv = normalized_yuv(_yuv)
 
     return _yuv
 
@@ -36,8 +37,9 @@ def yuv_to_rgb(yuv_image):
     :param yuv_image: an image with YUV color space
     :return: an image with RGB color space
     """
-    # Denormalize y, u, v channels
-    yuv_image = denormalized_yuv(yuv_image)
+    if normalize_yuv:
+        # Denormalize y, u, v channels
+        yuv_image = denormalized_yuv(yuv_image)
 
     # Get y, u, v channel
     _y = tf.slice(yuv_image, [0, 0, 0, 0], [-1, -1, -1, 1])
@@ -45,12 +47,15 @@ def yuv_to_rgb(yuv_image):
     _v = tf.slice(yuv_image, [0, 0, 0, 2], [-1, -1, -1, 1])
 
     # Calculate r, g, b channel
-    _r = _y + 1.13983 * _v
-    _g = _y - 0.39464 * _u - 0.58060 * _v
-    _b = _y + 2.03211 * _u
+    _r = (_y + 1.13983 * _v) * 255.0
+    _g = (_y - 0.39464 * _u - 0.58060 * _v) * 255.0
+    _b = (_y + 2.03211 * _u) * 255.0
 
     # Get image with RGB color space
     _rgb = tf.concat(concat_dim=3, values=[_r, _g, _b])
+    _rgb = tf.maximum(_rgb, tf.zeros(_rgb.get_shape(), dtype=tf.float32))
+    _rgb = tf.minimum(_rgb, tf.mul(tf.ones(_rgb.get_shape(), dtype=tf.float32), 255.0))
+    _rgb = tf.div(_rgb, 255.0)
 
     return _rgb
 
