@@ -41,14 +41,14 @@ def read_image(filename_queue):
     reader = tf.WholeFileReader()
     key, content = reader.read(filename_queue)
     rgb_image = tf.image.decode_jpeg(content, channels=3, name="decoded_jpg")
-    # Make pixel element value in [0, 1)
-    rgb_image = tf.image.convert_image_dtype(rgb_image, tf.float32, name="float_image")
     # Resize image to the right image_size
     rgb_image = tf.image.resize_images(rgb_image, [image_size, image_size], method=input_resize_method)
+    # Make pixel element value in [0, 1)
+    rgb_image = tf.div(tf.cast(rgb_image, tf.float32), 255, name="float_image")
     return rgb_image
 
 
-def input_pipeline(filenames, b_size, num_epochs=None, shuffle=True):
+def input_pipeline(filenames, b_size, num_epochs=None, shuffle=False):
     """
     Use a queue that randomizes the order of examples and return batch of images
     :param filenames: filenames

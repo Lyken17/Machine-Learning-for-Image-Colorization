@@ -20,6 +20,7 @@ if __name__ == '__main__':
     print "Init placeholder"
     is_training = tf.placeholder(tf.bool, name="training_flag")
     global_step = tf.Variable(0, name='global_step', trainable=False)
+    uv = tf.placeholder(tf.uint8, name='uv')
 
     # Init vgg16 model
     print "Init vgg16 model"
@@ -50,6 +51,13 @@ if __name__ == '__main__':
 
     opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
     optimizer = opt.minimize(cost, global_step=global_step, gate_gradients=opt.GATE_NONE)
+
+    if uv == 1:
+        cost = tf.split(3, 2, cost)[0]
+    elif uv == 2:
+        cost = tf.split(3, 2, cost)[1]
+    else:
+        cost = (tf.split(3, 2, cost)[0] + tf.split(3, 2, cost)[1]) / 2
 
     # Summaries
     print "Init summaries"
@@ -95,12 +103,13 @@ if __name__ == '__main__':
                 step = sess.run(global_step)
 
                 # Run optimizer
-                sess.run(optimizer, feed_dict={is_training: True})
+                sess.run(optimizer, feed_dict={is_training: True, uv: 1})
+                sess.run(optimizer, feed_dict={is_training: True, uv: 2})
 
                 # Print batch loss
                 if step % display_step == 0:
                     loss, pred, color, gray, summary = sess.run([cost, predict_rgb, color_image_rgb, gray_image_rgb, merged],
-                                                                feed_dict={is_training: False})
+                                                                feed_dict={is_training: False, uv: 3})
                     print "Iter %d, Minibatch Loss = %f" % (step, np.mean(loss))
                     train_writer.add_summary(summary, step)
                     train_writer.flush()
