@@ -4,3 +4,6 @@
   
 ## For Colorizing Images
 Please refer to the sub-directory corresponding to the specific approach you want to utilize.
+  
+## For Pre-trained Models  
+Please download them in [RELEASE](https://github.com/Lyken17/Image-Colorization/releases)
