@@ -1,5 +1,3 @@
-# CMPT-419-Proj
-Go to Issues and discuss which topic to choose.
+# Image Colorization
 
-##Calculate Test Error
-nn.MSECriterion():forward(yuv_orig,yuv_out)
+![poster](https://cloud.githubusercontent.com/assets/4648756/20785778/d3995ec0-b756-11e6-8cfe-e4ac85bedf11.jpg)
