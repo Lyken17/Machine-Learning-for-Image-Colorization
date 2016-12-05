@@ -31,5 +31,5 @@ for file = files'
 end
 
 %Normalize YUV from [0,255] to [0,1]
-error=error/double(count)/3.0;
+error=error/double(count)/2.0;
 save('error.mat','error');
