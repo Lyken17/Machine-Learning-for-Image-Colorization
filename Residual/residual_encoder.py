@@ -55,7 +55,7 @@ class ResidualEncoder(object):
             bn = ConvolutionalBatchNormalizer(depth, 0.001, ewma, True)
             update_assignments = bn.get_assigner()
             x = bn.normalize(input_data, train=training_flag)
-            return x
+        return x
 
     @staticmethod
     def batch_normal_old(input_data, scope, training_flag):
@@ -83,24 +83,26 @@ class ResidualEncoder(object):
         """
         return tf.nn.max_pool(layer_input, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
 
-    def conv_layer(self, layer_input, scope, is_training, relu=True):
+    def conv_layer(self, layer_input, scope, is_training, relu=True, bn=True):
         """
         Convolution layer
         :param layer_input: the input data for this layer
         :param scope: scope for this layer
         :param is_training: a flag indicate if now is in training
         :param relu: relu flag
+        :param bn: batch normalize flag
         :return: the layer data after convolution
         """
         with tf.variable_scope(scope):
             weight = self.get_weight(scope)
             output = tf.nn.conv2d(layer_input, weight, strides=[1, 1, 1, 1], padding='SAME', name="conv")
-            output = self.batch_normal(output, training_flag=is_training, scope=scope, depth=weight.get_shape()[3])
+            if bn:
+                output = self.batch_normal(output, training_flag=is_training, scope=scope, depth=weight.get_shape()[3])
             if relu:
                 output = tf.nn.relu(output, name="relu")
                 output = tf.maximum(0.01 * output, output)
             else:
-                output = tf.tanh(output, name="tanh")
+                output = tf.sigmoid(output, name="sigmoid")
             return output
 
     def build(self, input_data, vgg, is_training):
@@ -116,7 +118,7 @@ class ResidualEncoder(object):
 
         # Batch norm and 1x1 convolutional layer 4
         bn_4 = self.batch_normal(vgg.conv4_3, "b_conv4", is_training, 512)
-        b_conv4 = self.conv_layer(bn_4, "b_conv4", is_training)
+        b_conv4 = self.conv_layer(bn_4, "b_conv4", is_training, bn=False)
 
         if debug:
             assert bn_4.get_shape().as_list()[1:] == [28, 28, 512]

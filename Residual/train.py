@@ -49,15 +49,16 @@ if __name__ == '__main__':
 
     cost = residual_encoder.get_cost(predict_val=predict, real_val=tf.slice(color_image_yuv, [0, 0, 0, 1], [-1, -1, -1, 2], name="color_image_uv"))
 
-    opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
-    optimizer = opt.minimize(cost, global_step=global_step, gate_gradients=opt.GATE_NONE)
-
     if uv == 1:
         cost = tf.split(3, 2, cost)[0]
     elif uv == 2:
         cost = tf.split(3, 2, cost)[1]
     else:
         cost = (tf.split(3, 2, cost)[0] + tf.split(3, 2, cost)[1]) / 2
+
+    if is_training is not None:
+        opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+        optimizer = opt.minimize(cost, global_step=global_step, gate_gradients=opt.GATE_NONE)
 
     # Summaries
     print "Init summaries"
@@ -100,11 +101,10 @@ if __name__ == '__main__':
 
         try:
             while not coord.should_stop():
-                step = sess.run(global_step)
-
                 # Run optimizer
                 sess.run(optimizer, feed_dict={is_training: True, uv: 1})
                 sess.run(optimizer, feed_dict={is_training: True, uv: 2})
+                step = sess.run(global_step)
 
                 # Print batch loss
                 if step % display_step == 0:

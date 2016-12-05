@@ -64,6 +64,5 @@ def input_pipeline(filenames, b_size, num_epochs=None, shuffle=False):
     image_batch = tf.train.shuffle_batch([yuv_image],
                                          batch_size=b_size,
                                          capacity=capacity,
-                                         shapes=[image_size, image_size, 3],
                                          min_after_dequeue=min_after_dequeue)
     return image_batch
