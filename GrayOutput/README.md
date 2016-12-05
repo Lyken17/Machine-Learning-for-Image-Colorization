@@ -1,5 +1,5 @@
 To test the UV error for gray output (output the input image).  
-YUV error COCO: 0.003442
+UV error COCO: 0.005163
 <br />      
 By Zeyu Zhao.   
 Nov. 30, 2016
