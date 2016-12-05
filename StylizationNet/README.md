@@ -1,7 +1,7 @@
 # neural-colorization
    
 Copied from https://github.com/zeruniverse/neural-colorization                  
-(Validation Error: 0.002505)    
+(Validation Error: 0.003758)    
      
 Feed-forward neural network for image colorization. Based on [Johnson's network structure](https://github.com/jcjohnson/fast-neural-style)      
 A part of [our course project](https://github.com/Lyken17/CMPT-419-Proj) for SFU Machine Learning.   
