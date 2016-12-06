@@ -2,17 +2,12 @@
 Config file
 """
 
-from sys import float_info
-
 import tensorflow as tf
 from tensorflow.python.ops.image_ops import ResizeMethod
 
 
 # Debug flag
 debug = True
-
-# Epsilon for math calculation
-eps = float_info.epsilon
 
 # Image size for training
 image_size = 224
@@ -21,11 +16,11 @@ image_size = 224
 learning_rate = 0.0001
 training_iters = 300000
 batch_size = 1
-dequeue_buffer_size = 1000
+dequeue_buffer_size = 100
 display_step = 1
 test_step = 10
-save_step = 1000
-test_iters = 100
+save_step = 5000
+test_iters = 10
 
 # Image resize method
 input_resize_method = ResizeMethod.BILINEAR

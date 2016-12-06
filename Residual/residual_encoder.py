@@ -58,9 +58,9 @@ class ResidualEncoder(object):
         return x
 
     @staticmethod
-    def batch_normal_old(input_data, scope, training_flag):
+    def batch_normal_new(input_data, scope, training_flag):
         """
-        Doing batch normalization
+        Doing batch normalization, this is the new version using build-in batch_norm, seems not work :(
         :param input_data: the input data
         :param scope: scope
         :param training_flag: the flag indicate if it is training
@@ -72,16 +72,6 @@ class ResidualEncoder(object):
                        lambda: batch_norm(input_data, decay=0.9999, is_training=False, center=True, scale=True,
                                           updates_collections=None, scope=scope, reuse=True),
                        name='batch_normalization')
-
-    @staticmethod
-    def max_pool(layer_input, name):
-        """
-        Polling layer
-        :param layer_input: the input data for this layer
-        :param name: name for this layer
-        :return: the layer data after max-pooling
-        """
-        return tf.nn.max_pool(layer_input, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
 
     def conv_layer(self, layer_input, scope, is_training, relu=True, bn=True):
         """

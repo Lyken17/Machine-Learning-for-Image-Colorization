@@ -2,6 +2,8 @@
 Test model
 """
 
+import sys
+
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -20,6 +22,7 @@ if __name__ == '__main__':
     print "Init placeholder"
     is_training = tf.placeholder(tf.bool, name="training_flag")
     global_step = tf.Variable(0, name='global_step', trainable=False)
+    uv = tf.placeholder(tf.uint8, name='uv')
 
     # Init vgg16 model
     print "Init vgg16 model"
@@ -35,21 +38,29 @@ if __name__ == '__main__':
     gray_image = tf.image.rgb_to_grayscale(color_image_rgb, name="gray_image")
     gray_image_rgb = tf.image.grayscale_to_rgb(gray_image, name="gray_image_rgb")
     gray_image_yuv = rgb_to_yuv(gray_image_rgb)
-    gray_image_norm = tf.mul(tf.sub(gray_image, y_norm_para), 2.0, name="gray_image_norm")
-    gray_image_input = tf.concat(concat_dim=3,
-                                 values=[gray_image_norm, gray_image_norm, gray_image_norm],
-                                 name="gray_image_input")
+    if normalize_yuv:
+        gray_image = tf.mul(tf.sub(gray_image, y_norm_para), 2.0, name="gray_image_norm")
+    gray_image = tf.concat(concat_dim=3, values=[gray_image, gray_image, gray_image])
 
     with tf.name_scope("content_vgg"):
-        vgg.build(gray_image_input)
+        vgg.build(gray_image)
 
-    predict = residual_encoder.build(input_data=gray_image_input, vgg=vgg, is_training=is_training)
-    cost = residual_encoder.get_cost(predict_val=predict, real_val=tf.slice(color_image_yuv, [0, 0, 0, 1], [-1, -1, -1, 2], name="color_image_uv"))
-    optimizer = tf.train.GradientDescentOptimizer(learning_rate=learning_rate) \
-        .minimize(cost, global_step=global_step, gate_gradients=tf.train.GradientDescentOptimizer.GATE_NONE)
-
+    predict = residual_encoder.build(input_data=gray_image, vgg=vgg, is_training=is_training)
     predict_yuv = tf.concat(concat_dim=3, values=[tf.slice(gray_image_yuv, [0, 0, 0, 0], [-1, -1, -1, 1], name="gray_image_y"), predict], name="predict_yuv")
     predict_rgb = yuv_to_rgb(predict_yuv)
+
+    cost = residual_encoder.get_cost(predict_val=predict, real_val=tf.slice(color_image_yuv, [0, 0, 0, 1], [-1, -1, -1, 2], name="color_image_uv"))
+
+    if uv == 1:
+        cost = tf.split(3, 2, cost)[0]
+    elif uv == 2:
+        cost = tf.split(3, 2, cost)[1]
+    else:
+        cost = (tf.split(3, 2, cost)[0] + tf.split(3, 2, cost)[1]) / 2
+
+    if is_training is not None:
+        opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
+        optimizer = opt.minimize(cost, global_step=global_step, gate_gradients=opt.GATE_NONE)
 
     # Summaries
     print "Init summaries"
@@ -114,8 +125,8 @@ if __name__ == '__main__':
                 # Print batch loss
                 if step % display_step == 0:
                     loss, pred, pred_rgb, color_rgb, gray_rgb, gray, color_yuv, summary = \
-                        sess.run([cost, predict, predict_rgb, color_image_rgb, gray_image_rgb, gray_image_input,
-                                  color_image_yuv, merged], feed_dict={is_training: False})
+                        sess.run([cost, predict, predict_rgb, color_image_rgb, gray_image_rgb, gray_image,
+                                  color_image_yuv, merged], feed_dict={is_training: False, uv: 3})
                     print "Iter %d, Minibatch Loss = %f" % (step, np.mean(loss))
                     test_writer.add_summary(summary, step)
                     test_writer.flush()
@@ -153,6 +164,9 @@ if __name__ == '__main__':
 
                 if step == test_iters:
                     break
+
+            print "Testing Finished!"
+            sys.stdout.flush()
 
         except tf.errors.OUT_OF_RANGE as e:
             # Handle exception

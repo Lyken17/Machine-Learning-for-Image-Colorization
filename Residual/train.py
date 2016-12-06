@@ -2,6 +2,8 @@
 Training model
 """
 
+import sys
+
 import numpy as np
 from matplotlib import pyplot as plt
 
@@ -118,7 +120,7 @@ if __name__ == '__main__':
                     if step % test_step == 0:
                         summary_image = concat_images(gray[0], pred[0])
                         summary_image = concat_images(summary_image, color[0])
-                        plt.imsave("summary/result/" + str(step) + "_0.jpg", sess.run(summary_image))
+                        plt.imsave("summary/result/" + str(step) + "_0.jpg", summary_image)
 
                 # Save model
                 if step % save_step == 0 and step != 0:
@@ -130,6 +132,7 @@ if __name__ == '__main__':
                     break
 
             print "Training Finished!"
+            sys.stdout.flush()
 
         except tf.errors.OUT_OF_RANGE as e:
             # Handle exception
