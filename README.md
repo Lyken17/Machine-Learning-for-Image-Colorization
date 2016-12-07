@@ -5,7 +5,7 @@ Highlight: [Stylization Network](https://github.com/zeruniverse/neural-colorizat
 ## Approach 
 + [Gray Output](https://github.com/Lyken17/Image-Colorization/tree/master/GrayOutput) (To test baseline error)  
 + [HOG + SVR](https://github.com/Lyken17/Image-Colorization/tree/master/HOG_SVR)
-+ [Residual](https://github.com/Lyken17/Image-Colorization/tree/master/Residual)
++ [Residual](https://github.com/Lyken17/Image-Colorization/tree/master/Residual)     
 + [Multi-Level Feature Network](https://github.com/Lyken17/Colorize-Your-World)
 + [Stylization Network](https://github.com/zeruniverse/neural-colorization)
 
