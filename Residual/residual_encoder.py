@@ -60,7 +60,7 @@ class ResidualEncoder(object):
     @staticmethod
     def batch_normal_new(input_data, scope, training_flag):
         """
-        Doing batch normalization, this is the new version using build-in batch_norm, seems not work :(
+        Doing batch normalization, this is the new version with build-in batch_norm function
         :param input_data: the input data
         :param scope: scope
         :param training_flag: the flag indicate if it is training
@@ -90,9 +90,8 @@ class ResidualEncoder(object):
                 output = self.batch_normal(output, training_flag=is_training, scope=scope, depth=weight.get_shape()[3])
             if relu:
                 output = tf.nn.relu(output, name="relu")
-                output = tf.maximum(0.01 * output, output)
             else:
-                output = tf.sigmoid(output, name="sigmoid")
+                output = tf.tanh(output, name="tanh")
             return output
 
     def build(self, input_data, vgg, is_training):

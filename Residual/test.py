@@ -32,23 +32,26 @@ if __name__ == '__main__':
     print "Init residual encoder model"
     residual_encoder = ResidualEncoder()
 
-    color_image_rgb = input_pipeline(test_file_paths, 1)
+    # Color image
+    color_image_rgb = input_pipeline(test_file_paths, 1, test=True)
     color_image_yuv = rgb_to_yuv(color_image_rgb)
 
+    # Gray image
     gray_image = tf.image.rgb_to_grayscale(color_image_rgb, name="gray_image")
     gray_image_rgb = tf.image.grayscale_to_rgb(gray_image, name="gray_image_rgb")
     gray_image_yuv = rgb_to_yuv(gray_image_rgb)
-    if normalize_yuv:
-        gray_image = tf.mul(tf.sub(gray_image, y_norm_para), 2.0, name="gray_image_norm")
     gray_image = tf.concat(concat_dim=3, values=[gray_image, gray_image, gray_image])
 
+    # Build vgg model
     with tf.name_scope("content_vgg"):
         vgg.build(gray_image)
 
+    # Predict model
     predict = residual_encoder.build(input_data=gray_image, vgg=vgg, is_training=is_training)
     predict_yuv = tf.concat(concat_dim=3, values=[tf.slice(gray_image_yuv, [0, 0, 0, 0], [-1, -1, -1, 1], name="gray_image_y"), predict], name="predict_yuv")
     predict_rgb = yuv_to_rgb(predict_yuv)
 
+    # Cost
     cost = residual_encoder.get_cost(predict_val=predict, real_val=tf.slice(color_image_yuv, [0, 0, 0, 1], [-1, -1, -1, 2], name="color_image_uv"))
 
     if uv == 1:
@@ -58,18 +61,13 @@ if __name__ == '__main__':
     else:
         cost = (tf.split(3, 2, cost)[0] + tf.split(3, 2, cost)[1]) / 2
 
+    # Optimizer
     if is_training is not None:
         opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
         optimizer = opt.minimize(cost, global_step=global_step, gate_gradients=opt.GATE_NONE)
 
     # Summaries
     print "Init summaries"
-    tf.histogram_summary("output_conv", weights["output_conv"])
-    tf.histogram_summary("b_conv4", weights["b_conv4"])
-    tf.histogram_summary("b_conv3", weights["b_conv3"])
-    tf.histogram_summary("b_conv2", weights["b_conv2"])
-    tf.histogram_summary("b_conv1", weights["b_conv1"])
-    tf.histogram_summary("b_conv0", weights["b_conv0"])
     tf.histogram_summary("cost", tf.reduce_mean(cost))
     tf.image_summary("color_image_rgb", color_image_rgb, max_images=1)
     tf.image_summary("predict_rgb", predict_rgb, max_images=1)
@@ -110,13 +108,6 @@ if __name__ == '__main__':
         # Start testing
         print "Start testing!!!"
 
-        # Init debug value
-        max_y, min_y = -1, 1
-        max_u, min_u = -1, 1
-        max_v, min_v = -1, 1
-        pred_max_u, pred_min_u = -1, 1
-        pred_max_v, pred_min_v = -1, 1
-
         try:
             step = 0
             while not coord.should_stop():
@@ -131,36 +122,10 @@ if __name__ == '__main__':
                     test_writer.add_summary(summary, step)
                     test_writer.flush()
 
-                    batch_y = tf.slice(gray, [0, 0, 0, 0], [-1, -1, -1, 1], name="batch_y")
-                    batch_u = tf.slice(color_yuv, [0, 0, 0, 1], [-1, -1, -1, 1], name="batch_u")
-                    batch_v = tf.slice(color_yuv, [0, 0, 0, 2], [-1, -1, -1, 1], name="batch_v")
-                    max_y = np.maximum(sess.run(tf.reduce_max(batch_y)), max_y)
-                    min_y = np.minimum(sess.run(tf.reduce_min(batch_y)), min_y)
-                    max_u = np.maximum(sess.run(tf.reduce_max(batch_u)), max_u)
-                    min_u = np.minimum(sess.run(tf.reduce_min(batch_u)), min_u)
-                    max_v = np.maximum(sess.run(tf.reduce_max(batch_v)), max_v)
-                    min_v = np.minimum(sess.run(tf.reduce_min(batch_v)), min_v)
-
                     # Save output image
-                    zero_x = tf.zeros(tf.shape(batch_y))
-                    pred_u = tf.slice(pred, [0, 0, 0, 0], [-1, -1, -1, 1], name="pred_u")
-                    pred_v = tf.slice(pred, [0, 0, 0, 1], [-1, -1, -1, 1], name="pred_v")
-                    u_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[zero_x, pred_u, zero_x]))
-                    v_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[zero_x, zero_x, pred_v]))
-                    uu_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[zero_x, batch_u, zero_x]))
-                    vv_image = yuv_to_rgb(tf.concat(concat_dim=3, values=[zero_x, zero_x, batch_v]))
-                    summary_image = concat_images(gray_rgb[0], u_image[0])
-                    summary_image = concat_images(summary_image, v_image[0])
-                    summary_image = concat_images(summary_image, pred_rgb[0])
-                    summary_image = concat_images(summary_image, uu_image[0])
-                    summary_image = concat_images(summary_image, vv_image[0])
+                    summary_image = concat_images(gray_rgb[0], pred_rgb[0])
                     summary_image = concat_images(summary_image, color_rgb[0])
-                    plt.imsave("summary/result/" + str(step) + "_0.jpg", sess.run(summary_image))
-
-                    pred_max_u = np.maximum(sess.run(tf.reduce_max(pred_u)), pred_max_u)
-                    pred_min_u = np.minimum(sess.run(tf.reduce_min(pred_u)), pred_min_u)
-                    pred_max_v = np.maximum(sess.run(tf.reduce_max(pred_v)), pred_max_v)
-                    pred_min_v = np.minimum(sess.run(tf.reduce_min(pred_v)), pred_min_v)
+                    plt.imsave("summary/result/" + str(step) + "_0.jpg", summary_image)
 
                 if step == test_iters:
                     break
@@ -176,12 +141,6 @@ if __name__ == '__main__':
         finally:
             # When done, ask the threads to stop.
             coord.request_stop()
-
-        print "Y in %f - %f" % (min_y, max_y)
-        print "U in %f - %f" % (min_u, max_u)
-        print "V in %f - %f" % (min_v, max_v)
-        print "Pred_U in %f - %f" % (pred_min_u, pred_max_u)
-        print "Pred_V in %f - %f" % (pred_min_v, pred_max_v)
 
     # Wait for threads to finish.
     coord.join(threads)

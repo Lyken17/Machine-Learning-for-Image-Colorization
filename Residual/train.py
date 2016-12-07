@@ -32,23 +32,26 @@ if __name__ == '__main__':
     print "Init residual encoder model"
     residual_encoder = ResidualEncoder()
 
+    # Color image
     color_image_rgb = input_pipeline(train_file_paths, batch_size)
     color_image_yuv = rgb_to_yuv(color_image_rgb)
 
+    # Gray image
     gray_image = tf.image.rgb_to_grayscale(color_image_rgb, name="gray_image")
     gray_image_rgb = tf.image.grayscale_to_rgb(gray_image, name="gray_image_rgb")
     gray_image_yuv = rgb_to_yuv(gray_image_rgb)
-    if normalize_yuv:
-        gray_image = tf.mul(tf.sub(gray_image, y_norm_para), 2.0, name="gray_image_norm")
     gray_image = tf.concat(concat_dim=3, values=[gray_image, gray_image, gray_image])
 
+    # Build vgg model
     with tf.name_scope("content_vgg"):
         vgg.build(gray_image)
 
+    # Predict model
     predict = residual_encoder.build(input_data=gray_image, vgg=vgg, is_training=is_training)
     predict_yuv = tf.concat(concat_dim=3, values=[tf.slice(gray_image_yuv, [0, 0, 0, 0], [-1, -1, -1, 1], name="gray_image_y"), predict], name="predict_yuv")
     predict_rgb = yuv_to_rgb(predict_yuv)
 
+    # Cost
     cost = residual_encoder.get_cost(predict_val=predict, real_val=tf.slice(color_image_yuv, [0, 0, 0, 1], [-1, -1, -1, 2], name="color_image_uv"))
 
     if uv == 1:
@@ -58,18 +61,13 @@ if __name__ == '__main__':
     else:
         cost = (tf.split(3, 2, cost)[0] + tf.split(3, 2, cost)[1]) / 2
 
+    # Optimizer
     if is_training is not None:
         opt = tf.train.GradientDescentOptimizer(learning_rate=learning_rate)
         optimizer = opt.minimize(cost, global_step=global_step, gate_gradients=opt.GATE_NONE)
 
     # Summaries
     print "Init summaries"
-    tf.histogram_summary("output_conv", weights["output_conv"])
-    tf.histogram_summary("b_conv4", weights["b_conv4"])
-    tf.histogram_summary("b_conv3", weights["b_conv3"])
-    tf.histogram_summary("b_conv2", weights["b_conv2"])
-    tf.histogram_summary("b_conv1", weights["b_conv1"])
-    tf.histogram_summary("b_conv0", weights["b_conv0"])
     tf.histogram_summary("cost", tf.reduce_mean(cost))
     tf.image_summary("color_image_rgb", color_image_rgb, max_images=1)
     tf.image_summary("predict_rgb", predict_rgb, max_images=1)

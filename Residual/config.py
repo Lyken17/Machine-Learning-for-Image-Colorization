@@ -13,13 +13,13 @@ debug = True
 image_size = 224
 
 # Parameters for neural network
-learning_rate = 0.0001
+learning_rate = 0.000001
 training_iters = 300000
 batch_size = 1
 dequeue_buffer_size = 100
 display_step = 1
-test_step = 10
-save_step = 5000
+test_step = 10  # Test and save image during training phase
+save_step = 50  # Save our model
 test_iters = 10
 
 # Image resize method
@@ -27,7 +27,7 @@ input_resize_method = ResizeMethod.BILINEAR
 training_resize_method = ResizeMethod.BILINEAR
 
 # YUV normalization parameters
-normalize_yuv = False
+normalize_yuv = True
 y_norm_para = 0.5
 u_norm_para = 0.436
 v_norm_para = 0.615

@@ -13,14 +13,18 @@ def rgb_to_yuv(rgb_image):
     :param rgb_image: an image with RGB color space
     :return: an image with YUV color space
     """
-    rgb2yuv_filter = tf.constant(
-        [[[[0.299, -0.169, 0.499],
-           [0.587, -0.331, -0.418],
-           [0.114, 0.499, -0.0813]]]])
-    rgb2yuv_bias = tf.constant([0.0, 0.5, 0.5])
+    # Get r, g, b channel
+    _r = tf.slice(rgb_image, [0, 0, 0, 0], [-1, -1, -1, 1])
+    _g = tf.slice(rgb_image, [0, 0, 0, 1], [-1, -1, -1, 1])
+    _b = tf.slice(rgb_image, [0, 0, 0, 2], [-1, -1, -1, 1])
 
-    yuv_image = tf.nn.conv2d(rgb_image, rgb2yuv_filter, [1, 1, 1, 1], 'SAME')
-    yuv_image = tf.nn.bias_add(yuv_image, rgb2yuv_bias)
+    # Calculate y, u, v channel
+    _y = (0.299 * _r) + (0.587 * _g) + (0.114 * _b)
+    _u = (-0.14713 * _r) - (0.28886 * _g) + (0.436 * _b)
+    _v = (0.615 * _r) - (0.51499 * _g) - (0.10001 * _b)
+
+    # Get image with YUV color space
+    yuv_image = tf.concat(concat_dim=3, values=[_y, _u, _v])
 
     if normalize_yuv:
         # Normalize y, u, v channels
@@ -39,15 +43,18 @@ def yuv_to_rgb(yuv_image):
         # Denormalize y, u, v channels
         yuv_image = denormalized_yuv(yuv_image)
 
-    yuv_image = tf.mul(yuv_image, 255)
-    yuv2rgb_filter = tf.constant(
-        [[[[1.0, 1.0, 1.0],
-           [0.0, -0.34413999, 1.77199996],
-           [1.40199995, -0.71414, 0.0]]]])
-    yuv2rgb_bias = tf.constant([-179.45599365, 135.45983887, -226.81599426])
+    # Get y, u, v channel
+    _y = tf.slice(yuv_image, [0, 0, 0, 0], [-1, -1, -1, 1])
+    _u = tf.slice(yuv_image, [0, 0, 0, 1], [-1, -1, -1, 1])
+    _v = tf.slice(yuv_image, [0, 0, 0, 2], [-1, -1, -1, 1])
 
-    rgb_image = tf.nn.conv2d(yuv_image, yuv2rgb_filter, [1, 1, 1, 1], 'SAME')
-    rgb_image = tf.nn.bias_add(rgb_image, yuv2rgb_bias)
+    # Calculate r, g, b channel
+    _r = (_y + 1.13983 * _v) * 255
+    _g = (_y - 0.39464 * _u - 0.58060 * _v) * 255
+    _b = (_y + 2.03211 * _u) * 255
+
+    # Get image with RGB color space
+    rgb_image = tf.concat(concat_dim=3, values=[_r, _g, _b])
     rgb_image = tf.maximum(rgb_image, tf.zeros(rgb_image.get_shape(), dtype=tf.float32))
     rgb_image = tf.minimum(rgb_image, tf.mul(tf.ones(rgb_image.get_shape(), dtype=tf.float32), 255))
     rgb_image = tf.div(rgb_image, 255)
@@ -66,8 +73,7 @@ def normalized_yuv(yuv_images):
     channel_u = tf.slice(yuv_images, [0, 0, 0, 1], [-1, -1, -1, 1])
     channel_v = tf.slice(yuv_images, [0, 0, 0, 2], [-1, -1, -1, 1])
 
-    # Normalize y, u, v channels
-    channel_y = tf.mul(tf.sub(channel_y, y_norm_para), 2.0, name="channel_y")
+    # Normalize u, v channels
     channel_u = tf.div(channel_u, u_norm_para, name="channel_u")
     channel_v = tf.div(channel_v, v_norm_para, name="channel_v")
 
@@ -87,8 +93,7 @@ def denormalized_yuv(yuv_images):
     channel_u = tf.slice(yuv_images, [0, 0, 0, 1], [-1, -1, -1, 1])
     channel_v = tf.slice(yuv_images, [0, 0, 0, 2], [-1, -1, -1, 1])
 
-    # Denormalize y, u, v channels
-    channel_y = tf.add(tf.div(channel_y, 2.0), y_norm_para, name="channel_y")
+    # Denormalize u, v channels
     channel_u = tf.mul(channel_u, u_norm_para, name="channel_u")
     channel_v = tf.mul(channel_v, v_norm_para, name="channel_v")
 
