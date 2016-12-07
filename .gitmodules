@@ -3,4 +3,4 @@
 	url = https://github.com/Lyken17/Colorize-Your-World
 [submodule "neural-colorization"]
 	path = StylizationNet
-	url = git@github.com:zeruniverse/neural-colorization.git
+	url = https://github.com/zeruniverse/neural-colorization
