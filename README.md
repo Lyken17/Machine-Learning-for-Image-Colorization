@@ -1,6 +1,9 @@
 # Image Colorization  
   
-Highlight: [Stylization Network](https://github.com/zeruniverse/neural-colorization)  
+Highlight: [Stylization Network](https://github.com/zeruniverse/neural-colorization)   
+  
+To clone the whole project, use `git clone --recursive`:  
+`git clone --recursive https://github.com/Lyken17/Image-Colorization`
   
 ## Approach 
 + [Gray Output](https://github.com/Lyken17/Image-Colorization/tree/master/GrayOutput) (To test baseline error)  
