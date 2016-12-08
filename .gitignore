@@ -1,9 +1,5 @@
-*/.idea/
-*/summary/
 */train2014/
 */val2014/
-*/tmp_test/
-*/vgg/vgg16.npy
 *.pyc
 *.dot
 *.t7

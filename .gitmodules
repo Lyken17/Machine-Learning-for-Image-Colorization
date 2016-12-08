@@ -4,3 +4,6 @@
 [submodule "neural-colorization"]
 	path = StylizationNet
 	url = https://github.com/zeruniverse/neural-colorization
+[submodule "ResidualEncoderNet"]
+	path = ResidualEncoderNet
+	url = https://github.com/Armour/Automatic-Image-Colorization
