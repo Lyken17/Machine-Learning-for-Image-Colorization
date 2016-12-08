@@ -5,6 +5,7 @@ Helper functions for read input
 import os
 
 import cv2
+import imghdr
 
 from config import *
 
@@ -18,14 +19,15 @@ def init_file_path(directory):
     paths = []
     for file_name in os.listdir(directory):
         # Skip files that is not jpg
-        if not file_name.endswith('.jpg'):
-            continue
         file_path = '%s/%s' % (directory, file_name)
+        if not file_name.endswith('.jpg') or imghdr.what(file_path) is not 'jpeg':
+            continue
         if debug:
             paths.append(file_path)
         else:
             # Throw gray space images, this takes long time if have many images
             # TODO: maybe can change to a fast way
+            print "Throwing all gray space images now... this may takes some time.."
             img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
             if len(img.shape) == 3 and img.shape[2] != 1:
                 paths.append(file_path)

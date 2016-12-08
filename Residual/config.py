@@ -6,21 +6,20 @@ import tensorflow as tf
 from tensorflow.python.ops.image_ops import ResizeMethod
 
 
-# Debug flag
+# Debug flag, if true, will check model shape using assert in each step and skip gray image check part (to save time)
 debug = True
 
 # Image size for training
 image_size = 224
 
 # Parameters for neural network
-learning_rate = 0.000001
-training_iters = 300000
-batch_size = 1
-dequeue_buffer_size = 100
-display_step = 1
-test_step = 10  # Test and save image during training phase
-save_step = 50  # Save our model
-test_iters = 10
+learning_rate = [1e-6, 1e-7, 1e-8]  # The learning rate for different iterations, see common.py for usage
+training_iters = 80000  # The training iterations number
+batch_size = 30  # The batch size
+display_step = 1  # Display loss for each step
+test_step = 1000  # Test and save image during training phase
+save_step = 5000  # Save our model
+dequeue_buffer_size = 1000
 
 # Image resize method
 input_resize_method = ResizeMethod.BILINEAR
@@ -35,6 +34,13 @@ v_norm_para = 0.615
 # Directory for training and testing dataset
 train_dir = "train2014"
 test_dir = "val2014"
+
+# Summary directory for training and testing
+train_summary = "summary/train"
+test_summary = "summary/test"
+
+# Model and generated images stored path
+model_path = "summary"
 
 # Weights for each layer
 weights = {
