@@ -17,6 +17,10 @@ def init_file_path(directory):
     :return: an array of image file path
     """
     paths = []
+
+    if not debug:
+        print "Throwing all gray space images now... this may takes some time.."
+
     for file_name in os.listdir(directory):
         # Skip files that is not jpg
         file_path = '%s/%s' % (directory, file_name)
@@ -27,7 +31,6 @@ def init_file_path(directory):
         else:
             # Throw gray space images, this takes long time if have many images
             # TODO: maybe can change to a fast way
-            print "Throwing all gray space images now... this may takes some time.."
             img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
             if len(img.shape) == 3 and img.shape[2] != 1:
                 paths.append(file_path)
