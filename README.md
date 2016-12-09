@@ -2,7 +2,7 @@
 
 Highlight: [Stylization Network](https://github.com/zeruniverse/neural-colorization)
 
-To clone the whole project, use `git clone --recursive`:
+To clone the whole project, use `git clone --recursive`:   
 `git clone --recursive https://github.com/Lyken17/Image-Colorization`
 
 ## Approach
