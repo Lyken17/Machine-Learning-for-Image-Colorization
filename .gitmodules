@@ -1,5 +1,5 @@
 [submodule "Colorize-Your-World"]
-	path = MLNet
+	path = MLFNet
 	url = https://github.com/Lyken17/Colorize-Your-World
 [submodule "neural-colorization"]
 	path = StylizationNet
