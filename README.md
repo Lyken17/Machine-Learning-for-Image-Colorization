@@ -7,10 +7,10 @@ To clone the whole project, use `git clone --recursive`:
 
 ## Approach
 + [Gray Output](https://github.com/Lyken17/Image-Colorization/tree/master/GrayOutput) (To test baseline error)
-+ [HOG + SVR](https://github.com/Lyken17/Image-Colorization/tree/master/HOG_SVR)
-+ [Residual Encoder Network](https://github.com/Armour/Automatic-Image-Colorization)
-+ [Multi-Level Feature Network](https://github.com/Lyken17/Colorize-Your-World)
-+ [Stylization Network](https://github.com/zeruniverse/neural-colorization)
++ [HOG + SVR](https://github.com/Lyken17/Image-Colorization/tree/master/HOG_SVR) (HOG_SVR)
++ [Residual Encoder Network](https://github.com/Armour/Automatic-Image-Colorization) (ResidualEncoderNet)
++ [Multi-Level Feature Network](https://github.com/Lyken17/Colorize-Your-World) (MLNet)
++ [Stylization Network](https://github.com/zeruniverse/neural-colorization) (StylizationNet)
 
 ## For Colorizing Images or Training Models
 Please refer to the sub-directory corresponding to the specific approach you want to utilize.
