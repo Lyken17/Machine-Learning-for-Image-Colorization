@@ -15,11 +15,17 @@ To clone the whole project, use `git clone --recursive`:
 ## For Colorizing Images or Training Models
 Please refer to the sub-directory corresponding to the specific approach you want to utilize.
 
-## For Pre-trained Models
+##
+### For Pre-trained Models
 Please download them in [RELEASE](https://github.com/Lyken17/Image-Colorization/releases)
+
+### Technical details
+Please refer to our [report](Report/colorization.pdf)
+
 
 ## Poster
 ![poster](https://cloud.githubusercontent.com/assets/4648756/20870912/ad2241ee-ba44-11e6-8919-25fb054bb96e.jpg)
+
 
 ## License
 See sub-directory. If sub-directory doesn't contain a LICENSE file, then MIT License applies.
