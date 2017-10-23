@@ -15,12 +15,13 @@ To clone the whole project, use `git clone --recursive`:
 ## For Colorizing Images or Training Models
 Please refer to the sub-directory corresponding to the specific approach you want to utilize.
 
-##
-### For Pre-trained Models
-Please download them in [RELEASE](https://github.com/Lyken17/Image-Colorization/releases)
+* Pre-trained Models
 
-### Technical details
-Please refer to our [report](Report/colorization.pdf)
+  Please download them in [RELEASE](https://github.com/Lyken17/Image-Colorization/releases)
+
+* Technical details
+
+  Please refer to our [report](Report/colorization.pdf)
 
 
 ## Poster
