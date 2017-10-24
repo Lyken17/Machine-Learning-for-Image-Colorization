@@ -25,7 +25,7 @@ Please refer to the sub-directory corresponding to the specific approach you wan
 
 
 ## Poster
-![poster](https://cloud.githubusercontent.com/assets/4648756/20870912/ad2241ee-ba44-11e6-8919-25fb054bb96e.jpg)
+![poster](Report/poster.png)
 
 
 ## License
