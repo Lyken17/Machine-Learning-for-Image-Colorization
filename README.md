@@ -12,6 +12,12 @@ To clone the whole project, use `git clone --recursive`:
 + [Multi-Level Feature Network](https://github.com/Lyken17/Colorize-Your-World) (MLNet)
 + [Stylization Network](https://github.com/zeruniverse/neural-colorization) (StylizationNet)
 
+Approachs  | Reference | Model Size | Quality 
+---  | --- | --- | ---
+Multi-Level Feature (this one) | [siggraph16](http://hi.cs.waseda.ac.jp/~iizuka/projects/colorization/data/colorization_sig2016.pdf) | 332M | High
+Stylization Network | [ECCV] | 17M | Medium ~ High (best on outdoor scences)
+Residual Encoder Network | \ | 98M | Medium 
+
 ## For Colorizing Images or Training Models
 Please refer to the sub-directory corresponding to the specific approach you want to utilize.
 
